@@ -23,10 +23,9 @@
             overflow: hidden;
             font-family: 'Press Start 2P', cursive;
             color: white;
-            touch-action: none; /* Crítico para móviles */
+            touch-action: none; 
         }
 
-        /* Contenedor principal: Ocupa toda la pantalla */
         #game-container {
             position: relative;
             width: 100%;
@@ -34,618 +33,469 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: #111;
+            background: #1a1a1a; /* Gris muy oscuro en lugar de negro puro */
         }
 
         canvas {
             display: block;
-            /* El canvas mantiene su aspect ratio interno pero se ajusta a la pantalla */
             width: 100%;
             height: 100%;
             object-fit: contain; 
             image-rendering: pixelated;
         }
 
-        /* --- UI INTERFAZ --- */
-        .ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-            display: none;
-        }
-
-        .top-bar {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 95%;
-            max-width: 800px;
-        }
-
-        .health-wrapper {
-            display: flex;
-            flex-direction: column;
-            width: 40%;
-        }
-
-        .player-name {
-            font-size: 10px;
-            margin-bottom: 5px;
-            text-shadow: 2px 2px black;
-            color: #fff;
-            white-space: nowrap;
-        }
-
-        .health-bar-container {
-            position: relative;
-            width: 100%;
-            height: 20px;
-            background: #333;
-            border: 2px solid #fff;
-        }
-
-        .health-bar {
-            position: absolute;
-            top: 0;
-            height: 100%;
-            background: #4ade80;
-            transition: width 0.2s ease-out;
-        }
-
-        #playerHealth { left: 0; }
-        #enemyHealth { right: 0; background: #f87171; }
-
-        .timer {
-            width: 40px;
-            height: 40px;
-            background: #222;
-            border: 2px solid #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 16px;
-            margin: 0 10px;
-        }
-
-        .overlay-text {
-            position: absolute;
-            top: 40%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 30px;
-            display: none;
-            z-index: 20;
-            text-shadow: 4px 4px 0 #000;
-            text-align: center;
-            width: 100%;
-        }
-
-        /* --- SELECCIÓN DE PERSONAJE --- */
-        #character-select {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        #character-select h2 {
-            margin-bottom: 20px;
-            font-size: 18px;
-            text-align: center;
-            color: #e94560;
-            text-shadow: 2px 2px 0 #000;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .char-card {
-            background: rgba(255,255,255,0.1);
-            border: 2px solid #444;
-            padding: 15px;
-            text-align: center;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .char-card:active { background: rgba(255,255,255,0.3); border-color: #fff; }
+        /* UI Layers */
+        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: none; }
+        .top-bar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: space-between; width: 90%; max-width: 600px; }
         
-        .char-preview {
-            width: 60px;
-            height: 60px;
-            background-repeat: no-repeat;
-            background-size: 400%; 
-            background-position: 0 0;
-            image-rendering: pixelated;
-            margin-bottom: 10px;
-            border-radius: 50%;
-            background-color: rgba(0,0,0,0.3);
-        }
+        .health-wrapper { width: 40%; }
+        .player-name { font-size: 10px; margin-bottom: 4px; text-shadow: 2px 2px 0 #000; }
+        .health-bar-container { width: 100%; height: 15px; background: #555; border: 2px solid #fff; }
+        .health-bar { height: 100%; background: #4ade80; transition: width 0.2s; }
+        #enemyHealth { background: #f87171; float: right; }
+        
+        .timer { width: 30px; height: 30px; background: #222; border: 2px solid #fff; display: flex; justify-content: center; align-items: center; font-size: 14px; }
 
-        /* --- CONTROLES TÁCTILES --- */
-        #mobile-controls {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 180px; /* Zona segura más alta */
-            display: none;
-            pointer-events: none;
-            z-index: 50;
-            padding: 20px;
-        }
+        .overlay-text { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 30px; display: none; z-index: 20; text-shadow: 3px 3px 0 #000; text-align: center; width: 100%; }
 
-        .control-group {
-            pointer-events: auto;
-            display: flex;
-            gap: 20px;
-        }
+        /* Selección de Personaje */
+        #character-select { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #121212; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #character-select h2 { margin-bottom: 15px; font-size: 16px; color: #e94560; }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .char-card { background: #222; border: 2px solid #444; padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; }
+        .char-preview { width: 50px; height: 50px; background-size: 400%; background-position: 0 0; border-radius: 50%; margin: 0 auto 5px auto; background-color: #000; }
 
-        .left-controls { position: absolute; bottom: 30px; left: 20px; }
-        .right-controls { position: absolute; bottom: 30px; right: 20px; }
+        /* Controles mejorados para dedos */
+        #mobile-controls { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+        .control-area-left { position: absolute; bottom: 20px; left: 20px; width: 140px; height: 140px; pointer-events: auto; }
+        .control-area-right { position: absolute; bottom: 20px; right: 20px; width: 140px; height: 140px; pointer-events: auto; }
 
-        .btn {
-            width: 65px;
-            height: 65px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: rgba(255,255,255,0.8);
-            font-size: 24px;
-            backdrop-filter: blur(4px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
+        .btn { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; position: absolute; display: flex; justify-content: center; align-items: center; font-size: 20px; color: white; }
+        .btn:active { background: rgba(255,255,255,0.4); }
+        
+        /* Posicionamiento ergonómico de botones */
+        #btn-left { bottom: 0; left: 0; }
+        #btn-right { bottom: 0; right: 0; }
+        #btn-attack { bottom: 20px; left: 0; width: 70px; height: 70px; background: rgba(255,0,0,0.2); border-color: #e94560; }
+        #btn-jump { bottom: 40px; right: 0; }
 
-        .btn:active { background: rgba(255, 255, 255, 0.4); transform: scale(0.95); }
-        .btn-big { width: 85px; height: 85px; background: rgba(233, 69, 96, 0.2); border-color: #e94560; color: #ff8fa3; }
-
-        #loading-msg { font-size: 12px; color: #aaa; margin-top: 20px; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        #loading-msg { color: #888; font-size: 10px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <!-- PANTALLA DE SELECCIÓN -->
-        <div id="character-select">
-            <h2>ELIGE TU LUCHADOR</h2>
-            <p class="selection-step" id="select-instruction" style="color:#aaa; font-size:12px; margin-bottom:10px;">Cargando...</p>
-            <div id="loading-msg">Procesando Imágenes...</div>
-            <div class="grid" id="char-grid" style="display:none;"></div>
-        </div>
+<div id="game-container">
+    <div id="character-select">
+        <h2>SELECCIONA LUCHADOR</h2>
+        <p id="select-instruction" style="color:#aaa; font-size:10px;">Jugador 1</p>
+        <div class="grid" id="char-grid" style="display:none;"></div>
+        <div id="loading-msg">Procesando Sprites...</div>
+    </div>
 
-        <!-- UI JUEGO -->
-        <div class="ui-layer" id="game-ui">
-            <div class="top-bar">
-                <div class="health-wrapper">
-                    <div class="player-name" id="p1-name">P1</div>
-                    <div class="health-bar-container"><div class="health-bar" id="playerHealth"></div></div>
-                </div>
-                <div class="timer" id="timer">60</div>
-                <div class="health-wrapper" style="align-items: flex-end;">
-                    <div class="player-name" id="p2-name">P2</div>
-                    <div class="health-bar-container"><div class="health-bar" id="enemyHealth"></div></div>
-                </div>
+    <div class="ui-layer" id="game-ui">
+        <div class="top-bar">
+            <div class="health-wrapper">
+                <div class="player-name" id="p1-name">P1</div>
+                <div class="health-bar-container"><div class="health-bar" id="playerHealth"></div></div>
             </div>
-        </div>
-
-        <div class="overlay-text" id="displayText">
-            <span id="winnerText">GANADOR</span>
-            <div style="font-size: 14px; margin-top: 15px; opacity: 0.8;">Toca para revancha</div>
-        </div>
-
-        <canvas id="canvas"></canvas>
-
-        <!-- CONTROLES -->
-        <div id="mobile-controls">
-            <div class="left-controls control-group">
-                <div class="btn" id="btn-left">←</div>
-                <div class="btn" id="btn-right">→</div>
-            </div>
-            <div class="right-controls control-group">
-                <div class="btn btn-big" id="btn-attack">⚔️</div>
-                <div class="btn" id="btn-jump">↑</div>
+            <div class="timer" id="timer">60</div>
+            <div class="health-wrapper" style="align-items: flex-end; text-align: right;">
+                <div class="player-name" id="p2-name">P2</div>
+                <div class="health-bar-container"><div class="health-bar" id="enemyHealth"></div></div>
             </div>
         </div>
     </div>
 
-    <script>
-        // --- CONFIGURACIÓN AJUSTADA ---
-        // He reducido el "scale" de 3.5 a 2.6 para que se vean mejor en celular
-        const CHARACTERS_CONFIG = {
-            juan: { name: "Juan", color: "#4ade80", src: "./images/juan.png", scale: 2.6, offset: { x: 120, y: 85 } },
-            fran: { name: "Fran", color: "#ffffff", src: "./images/fran.png", scale: 2.6, offset: { x: 120, y: 85 } },
-            fede: { name: "Fede", color: "#60a5fa", src: "./images/fede.png", scale: 2.6, offset: { x: 120, y: 85 } },
-            rodri: { name: "Rodri", color: "#a78bfa", src: "./images/rodri.png", scale: 2.6, offset: { x: 120, y: 85 } }
-        };
+    <div class="overlay-text" id="displayText">
+        <span id="winnerText">GANADOR</span>
+        <div style="font-size: 12px; margin-top: 10px; opacity: 0.7;">Toca para reiniciar</div>
+    </div>
 
-        // --- PROCESAMIENTO DE IMAGEN (CHROMA KEY) ---
-        const processedImages = {};
-        
-        function removeBackground(imageSrc) {
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.crossOrigin = "Anonymous";
-                img.src = imageSrc;
-                img.onload = () => {
-                    const c = document.createElement('canvas');
-                    const ctx = c.getContext('2d');
-                    c.width = img.width;
-                    c.height = img.height;
-                    ctx.drawImage(img, 0, 0);
-                    const id = ctx.getImageData(0, 0, c.width, c.height);
-                    const d = id.data;
-                    // Eliminar fondo oscuro
-                    for (let i = 0; i < d.length; i += 4) {
-                        if (d[i] < 50 && d[i+1] < 50 && d[i+2] < 50) d[i+3] = 0;
-                    }
-                    ctx.putImageData(id, 0, 0);
-                    const newImg = new Image();
-                    newImg.src = c.toDataURL();
-                    resolve(newImg);
-                };
-                img.onerror = () => resolve(new Image()); // Fallback seguro
-            });
-        }
+    <canvas id="canvas"></canvas>
 
-        async function loadAllCharacters() {
-            await Promise.all(Object.keys(CHARACTERS_CONFIG).map(async k => {
-                processedImages[k] = await removeBackground(CHARACTERS_CONFIG[k].src);
-            }));
-            initSelectionScreen();
-        }
+    <div id="mobile-controls">
+        <div class="control-area-left">
+            <div class="btn" id="btn-left">←</div>
+            <div class="btn" id="btn-right">→</div>
+        </div>
+        <div class="control-area-right">
+            <div class="btn" id="btn-attack">⚔️</div>
+            <div class="btn" id="btn-jump">↑</div>
+        </div>
+    </div>
+</div>
 
-        // --- MOTOR ---
-        const canvas = document.querySelector('canvas');
-        const c = canvas.getContext('2d');
-        
-        // Resolución interna fija para mantener consistencia pixel art
-        canvas.width = 1024;
-        canvas.height = 576;
-        
-        const gravity = 0.7;
+<script>
+    /* AJUSTE DE TAMAÑO (SCALE):
+       Si las imágenes son de alta resolución, un scale bajo (0.85) es necesario.
+       Si se ven muy pequeños ahora, sube esto a 1.2.
+       Si se siguen viendo grandes, bájalo a 0.6.
+    */
+    const GLOBAL_SCALE = 0.85; 
+    
+    const CHARACTERS_CONFIG = {
+        juan:  { name: "Juan",  src: "./images/juan.png",  scale: GLOBAL_SCALE, offset: { x: 50, y: 60 } },
+        fran:  { name: "Fran",  src: "./images/fran.png",  scale: GLOBAL_SCALE, offset: { x: 50, y: 60 } },
+        fede:  { name: "Fede",  src: "./images/fede.png",  scale: GLOBAL_SCALE, offset: { x: 50, y: 60 } },
+        rodri: { name: "Rodri", src: "./images/rodri.png", scale: GLOBAL_SCALE, offset: { x: 50, y: 60 } }
+    };
 
-        // Fondo dinámico (Estrellas)
-        const stars = Array(50).fill().map(() => ({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            size: Math.random() * 2 + 1,
-            speed: Math.random() * 0.5 + 0.1
-        }));
-
-        function drawBackground() {
-            // Gradiente cielo
-            const grad = c.createLinearGradient(0, 0, 0, canvas.height);
-            grad.addColorStop(0, "#1a0b2e"); // Púrpura oscuro
-            grad.addColorStop(1, "#432371"); // Violeta
-            c.fillStyle = grad;
-            c.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Estrellas
-            c.fillStyle = "white";
-            stars.forEach(star => {
-                c.globalAlpha = Math.random() * 0.5 + 0.3;
-                c.fillRect(star.x, star.y, star.size, star.size);
-                star.x -= star.speed;
-                if(star.x < 0) star.x = canvas.width;
-            });
-            c.globalAlpha = 1.0;
-
-            // Suelo
-            c.fillStyle = "#111";
-            c.fillRect(0, canvas.height - 96, canvas.width, 96);
-            
-            // Detalles suelo
-            c.fillStyle = "#222"; 
-            for(let i=0; i<canvas.width; i+=50) c.fillRect(i, canvas.height-90, 40, 5);
-        }
-
-        class Sprite {
-            constructor({ position, image, scale = 1, framesMax = 1, offset = { x: 0, y: 0 } }) {
-                this.position = position;
-                this.image = image;
-                this.scale = scale;
-                this.framesMax = framesMax;
-                this.framesCurrent = 0;
-                this.framesElapsed = 0;
-                this.framesHold = 8;
-                this.offset = offset;
-                this.rows = 5; 
-                this.currentRow = 0; 
-            }
-            draw() {
-                if(!this.image || !this.image.width) return;
-                const fw = this.image.width / this.framesMax;
-                const fh = this.image.height / this.rows;
-                
-                // Invertir si mira a la izquierda (lógica básica)
-                // Aquí solo dibujamos normal, la inversión se hace en Fighter si hace falta, 
-                // pero por simplicidad y rendimiento mantenemos dibujo estándar.
-                c.drawImage(
-                    this.image,
-                    this.framesCurrent * fw, this.currentRow * fh, fw, fh,
-                    this.position.x - this.offset.x, this.position.y - this.offset.y,
-                    fw * this.scale, fh * this.scale
-                );
-            }
-            animateFrames() {
-                this.framesElapsed++;
-                if (this.framesElapsed % this.framesHold === 0) {
-                    if (this.framesCurrent < this.framesMax - 1) this.framesCurrent++;
-                    else this.framesCurrent = 0;
+    // --- PROCESAMIENTO DE IMAGEN (CHROMA KEY) ---
+    const processedImages = {};
+    function removeBackground(src) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.src = src;
+            img.onload = () => {
+                const c = document.createElement('canvas');
+                const ctx = c.getContext('2d');
+                c.width = img.width; c.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                const id = ctx.getImageData(0, 0, c.width, c.height);
+                const d = id.data;
+                for (let i = 0; i < d.length; i += 4) {
+                    // Eliminar negro oscuro
+                    if (d[i] < 50 && d[i+1] < 50 && d[i+2] < 50) d[i+3] = 0;
                 }
-            }
-            update() { this.draw(); this.animateFrames(); }
-        }
+                ctx.putImageData(id, 0, 0);
+                const newImg = new Image();
+                newImg.src = c.toDataURL();
+                resolve(newImg);
+            };
+            img.onerror = () => resolve(new Image());
+        });
+    }
 
-        class Fighter extends Sprite {
-            constructor({ position, velocity, image, scale = 1, framesMax = 1, offset = { x: 0, y: 0 }, name }) {
-                super({ position, image, scale, framesMax, offset });
-                this.velocity = velocity;
-                this.width = 50; this.height = 150;
-                this.lastKey;
-                this.attackBox = { position: { x: this.position.x, y: this.position.y }, offset: { x: 100, y: 50 }, width: 140, height: 50 };
-                this.isAttacking = false;
-                this.health = 100;
-                this.framesHold = 6;
-                this.dead = false;
-                this.name = name;
-            }
+    async function loadAssets() {
+        const promises = Object.keys(CHARACTERS_CONFIG).map(async k => {
+            processedImages[k] = await removeBackground(CHARACTERS_CONFIG[k].src);
+        });
+        await Promise.all(promises);
+        initMenu();
+    }
 
-            update() {
-                this.draw();
-                if (!this.dead) this.animateFrames();
+    // --- MOTOR ---
+    const canvas = document.querySelector('canvas');
+    const c = canvas.getContext('2d');
+    // Resolución interna fija (HD Ready)
+    canvas.width = 1024; 
+    canvas.height = 576;
+    
+    const gravity = 0.6;
 
-                // Actualizar caja de ataque (siempre al frente para simplificar)
-                // Detectar si soy P1 o P2 para dirección
-                const isP1 = this.name === player?.name;
-                const atkOffset = isP1 ? 60 : -120; 
+    // Estrellas para el fondo
+    const stars = Array(40).fill().map(() => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        s: Math.random() * 2,
+        v: Math.random() * 0.5 + 0.1
+    }));
 
-                this.attackBox.position.x = this.position.x + atkOffset;
-                this.attackBox.position.y = this.position.y + 50;
+    function drawBackground() {
+        // Gradiente espacial
+        let g = c.createLinearGradient(0, 0, 0, canvas.height);
+        g.addColorStop(0, "#0f0c29"); 
+        g.addColorStop(1, "#302b63");
+        c.fillStyle = g; 
+        c.fillRect(0, 0, canvas.width, canvas.height);
 
-                this.position.x += this.velocity.x;
-                this.position.y += this.velocity.y;
+        c.fillStyle = "rgba(255,255,255,0.6)";
+        stars.forEach(st => {
+            c.fillRect(st.x, st.y, st.s, st.s);
+            st.x -= st.v;
+            if(st.x < 0) st.x = canvas.width;
+        });
 
-                // Suelo
-                if (this.position.y + this.height + this.velocity.y >= canvas.height - 96) {
-                    this.velocity.y = 0;
-                    this.position.y = 330;
-                } else this.velocity.y += gravity;
+        // Suelo
+        c.fillStyle = "#1a1a1a";
+        c.fillRect(0, canvas.height - 80, canvas.width, 80);
+        c.fillStyle = "#333"; // Borde suelo
+        c.fillRect(0, canvas.height - 80, canvas.width, 4);
+    }
 
-                // Paredes
-                if (this.position.x < 0) this.position.x = 0;
-                if (this.position.x + this.width > canvas.width) this.position.x = canvas.width - this.width;
-            }
-
-            attack() { this.switchSprite('attack1'); this.isAttacking = true; }
-            takeHit() { this.health -= 10; if (this.health <= 0) this.switchSprite('death'); else this.switchSprite('takeHit'); }
+    class Fighter {
+        constructor({ position, velocity, image, scale, offset, name }) {
+            this.position = position;
+            this.velocity = velocity;
+            this.image = image;
+            this.scale = scale;
+            this.offset = offset; // offset visual
+            this.name = name;
             
-            switchSprite(sprite) {
-                if (this.currentRow === 4 && this.framesCurrent === this.framesMax - 1 && this.dead) return;
-                if (this.currentRow === 2 && this.framesCurrent < this.framesMax - 1) return;
-                if (this.currentRow === 4 && this.framesCurrent < this.framesMax - 1 && !this.dead) return;
-
-                switch (sprite) {
-                    case 'idle': if (this.currentRow !== 0) { this.currentRow = 0; this.framesMax = 4; this.framesCurrent = 0; } break;
-                    case 'run': if (this.currentRow !== 1) { this.currentRow = 1; this.framesMax = 8; this.framesCurrent = 0; } break;
-                    case 'attack1': if (this.currentRow !== 2) { this.currentRow = 2; this.framesMax = 4; this.framesCurrent = 0; } break;
-                    case 'takeHit': if (this.currentRow !== 4) { this.currentRow = 4; this.framesMax = 3; this.framesCurrent = 0; } break;
-                    case 'death': if (this.currentRow !== 4) { this.currentRow = 4; this.framesMax = 3; this.framesCurrent = 0; this.dead = true; } break;
-                }
-            }
-        }
-
-        let player, enemy, timer = 60, timerId, gameRunning = false;
-        const keys = { a: { pressed: false }, d: { pressed: false }, ArrowRight: { pressed: false }, ArrowLeft: { pressed: false } };
-
-        function initSelectionScreen() {
-            document.getElementById('loading-msg').style.display = 'none';
-            document.getElementById('select-instruction').innerText = "JUGADOR 1: SELECCIONA";
-            const grid = document.getElementById('char-grid');
-            grid.style.display = 'grid';
-            grid.innerHTML = '';
-
-            Object.keys(CHARACTERS_CONFIG).forEach(key => {
-                const char = CHARACTERS_CONFIG[key];
-                const card = document.createElement('div');
-                card.className = 'char-card';
-                
-                const pCanvas = document.createElement('canvas');
-                pCanvas.width = 60; pCanvas.height = 60;
-                const pc = pCanvas.getContext('2d');
-                pc.imageSmoothingEnabled = false;
-                // Zoom a la cara
-                pc.drawImage(processedImages[key], 0, 0, 60, 60, 0, 0, 250, 250);
-
-                card.innerHTML = `<div class="char-preview" style="background-image: url(${pCanvas.toDataURL()})"></div><span>${char.name}</span>`;
-                card.onclick = () => selectCharacter(key);
-                grid.appendChild(card);
-            });
-        }
-
-        let p1Selection = null;
-        function selectCharacter(key) {
-            if (!p1Selection) {
-                p1Selection = key;
-                document.getElementById('select-instruction').innerText = "JUGADOR 2: SELECCIONA";
-                document.getElementById('select-instruction').style.color = "#f87171";
-            } else {
-                document.getElementById('character-select').style.display = 'none';
-                startGame(p1Selection, key);
-            }
-        }
-
-        function startGame(p1Key, p2Key) {
-            const p1 = CHARACTERS_CONFIG[p1Key];
-            const p2 = CHARACTERS_CONFIG[p2Key];
-
-            document.getElementById('game-ui').style.display = 'block'; // Fix display
-            document.getElementById('p1-name').innerText = p1.name;
-            document.getElementById('p2-name').innerText = p2.name;
-
-            player = new Fighter({ position: { x: 150, y: 0 }, velocity: { x: 0, y: 0 }, image: processedImages[p1Key], scale: p1.scale, offset: p1.offset, framesMax: 4, name: p1.name });
-            enemy = new Fighter({ position: { x: 800, y: 0 }, velocity: { x: 0, y: 0 }, image: processedImages[p2Key], scale: p2.scale, offset: p2.offset, framesMax: 4, name: p2.name });
-
-            player.health = 100; enemy.health = 100;
-            document.getElementById('playerHealth').style.width = '100%';
-            document.getElementById('enemyHealth').style.width = '100%';
-            timer = 60; gameRunning = true;
-            document.getElementById('displayText').style.display = 'none';
+            this.width = 50; // hitbox ancho
+            this.height = 150; // hitbox alto
             
-            decreaseTimer();
-            animate();
-
-            if('ontouchstart' in window || navigator.maxTouchPoints > 0) document.getElementById('mobile-controls').style.display = 'block';
+            this.framesMax = 4; 
+            this.framesCurrent = 0;
+            this.framesElapsed = 0;
+            this.framesHold = 8;
+            this.rows = 5; 
+            this.currentRow = 0; // 0:idle, 1:run, 2:attack, 4:hurt/dead
+            
+            this.lastKey;
+            this.attackBox = { position: {x:0, y:0}, width: 120, height: 50 };
+            this.isAttacking = false;
+            this.health = 100;
+            this.dead = false;
         }
 
-        function rectangularCollision({ rectangle1, rectangle2 }) {
-            return (
-                rectangle1.attackBox.position.x + rectangle1.attackBox.width >= rectangle2.position.x &&
-                rectangle1.attackBox.position.x <= rectangle2.position.x + rectangle2.width &&
-                rectangle1.attackBox.position.y + rectangle1.attackBox.height >= rectangle2.position.y &&
-                rectangle1.attackBox.position.y <= rectangle2.position.y + rectangle2.height
+        draw() {
+            if(!this.image) return;
+            // Ancho de frame calculado dinámicamente
+            const fw = this.image.width / this.framesMax;
+            const fh = this.image.height / this.rows;
+            
+            c.drawImage(
+                this.image,
+                this.framesCurrent * fw, this.currentRow * fh, fw, fh,
+                this.position.x - this.offset.x, this.position.y - this.offset.y,
+                fw * this.scale, fh * this.scale
             );
         }
 
-        function determineWinner({ player, enemy, timerId }) {
-            clearTimeout(timerId);
-            document.querySelector('#displayText').style.display = 'block';
-            const txt = document.querySelector('#winnerText');
-            if (player.health === enemy.health) txt.innerText = 'EMPATE';
-            else if (player.health > enemy.health) txt.innerText = player.name + ' GANA';
-            else txt.innerText = enemy.name + ' GANA';
-            gameRunning = false;
+        update() {
+            this.draw();
+            if(!this.dead) {
+                this.framesElapsed++;
+                if(this.framesElapsed % this.framesHold === 0) {
+                    if(this.framesCurrent < this.framesMax - 1) this.framesCurrent++;
+                    else this.framesCurrent = 0;
+                }
+            }
+
+            // Attack box logic
+            // Si soy P1 (izquierda) pego a la derecha, si soy P2 (derecha) pego a la izquierda
+            // Simplificación: Basado en nombre para este demo
+            const isP1 = (this.name === player?.name);
+            const atkOffset = isP1 ? 50 : -120; 
+
+            this.attackBox.position.x = this.position.x + atkOffset;
+            this.attackBox.position.y = this.position.y + 40;
+
+            this.position.x += this.velocity.x;
+            this.position.y += this.velocity.y;
+
+            // Suelo
+            if (this.position.y + this.height + this.velocity.y >= canvas.height - 80) {
+                this.velocity.y = 0;
+                this.position.y = canvas.height - 80 - this.height;
+            } else {
+                this.velocity.y += gravity;
+            }
+
+            // Paredes
+            if(this.position.x < 0) this.position.x = 0;
+            if(this.position.x + this.width > canvas.width) this.position.x = canvas.width - this.width;
         }
 
-        function decreaseTimer() {
-            if (timer > 0) { timerId = setTimeout(decreaseTimer, 1000); timer--; document.querySelector('#timer').innerHTML = timer; }
-            if (timer === 0) determineWinner({ player, enemy, timerId });
+        attack() { this.switchSprite(2); this.isAttacking = true; }
+        takeHit() { 
+            this.health -= 10; 
+            if(this.health <= 0) this.switchSprite(4, true); 
+            else this.switchSprite(4); 
         }
 
-        function animate() {
-            if(!gameRunning) return;
-            window.requestAnimationFrame(animate);
-            drawBackground();
+        switchSprite(row, isDead = false) {
+            // Prioridad animaciones
+            if(this.currentRow === 4 && this.framesCurrent < this.framesMax - 1 && !this.dead) return; // Hit stun
+            if(this.currentRow === 2 && this.framesCurrent < this.framesMax - 1) return; // Attack active
+            if(this.dead) return; // Already dead
 
-            player.update();
-            enemy.update();
-
-            // P1
-            player.velocity.x = 0;
-            if (keys.a.pressed && player.lastKey === 'a') { player.velocity.x = -5; player.switchSprite('run'); }
-            else if (keys.d.pressed && player.lastKey === 'd') { player.velocity.x = 5; player.switchSprite('run'); }
-            else player.switchSprite('idle');
-            if (player.velocity.y < 0) {}
-
-            // P2 (IA Simple para que se mueva un poco)
-            enemy.velocity.x = 0;
-            // Si P2 es controlado por humano:
-            if (keys.ArrowLeft.pressed && enemy.lastKey === 'ArrowLeft') { enemy.velocity.x = -5; enemy.switchSprite('run'); }
-            else if (keys.ArrowRight.pressed && enemy.lastKey === 'ArrowRight') { enemy.velocity.x = 5; enemy.switchSprite('run'); }
-            else enemy.switchSprite('idle');
-
-            // Colisiones
-            if (rectangularCollision({ rectangle1: player, rectangle2: enemy }) && player.isAttacking && player.framesCurrent === 1) {
-                enemy.takeHit(); player.isAttacking = false;
-                document.querySelector('#enemyHealth').style.width = enemy.health + '%';
+            if(this.currentRow !== row) {
+                this.currentRow = row;
+                this.framesCurrent = 0;
+                // Ajustes específicos por fila
+                if(row === 0) this.framesMax = 4; // Idle
+                if(row === 1) this.framesMax = 8; // Run
+                if(row === 2) this.framesMax = 4; // Punch
+                if(row === 4) {
+                    this.framesMax = 3; // Hurt/Dead
+                    if(isDead) this.dead = true;
+                }
             }
-            if (player.isAttacking && player.framesCurrent === 1) player.isAttacking = false;
-
-            if (rectangularCollision({ rectangle1: enemy, rectangle2: player }) && enemy.isAttacking && enemy.framesCurrent === 1) {
-                player.takeHit(); enemy.isAttacking = false;
-                document.querySelector('#playerHealth').style.width = player.health + '%';
-            }
-            if (enemy.isAttacking && enemy.framesCurrent === 1) enemy.isAttacking = false;
-
-            if (enemy.health <= 0 || player.health <= 0) determineWinner({ player, enemy, timerId });
         }
+    }
 
-        // Inputs
-        window.addEventListener('keydown', (event) => {
-            if(!player || player.dead || !gameRunning) return;
-            switch (event.key) {
-                case 'd': keys.d.pressed = true; player.lastKey = 'd'; break;
-                case 'a': keys.a.pressed = true; player.lastKey = 'a'; break;
-                case 'w': player.velocity.y = -15; break;
-                case ' ': player.attack(); break;
-                case 'ArrowRight': keys.ArrowRight.pressed = true; enemy.lastKey = 'ArrowRight'; break;
-                case 'ArrowLeft': keys.ArrowLeft.pressed = true; enemy.lastKey = 'ArrowLeft'; break;
-                case 'ArrowUp': enemy.velocity.y = -15; break;
-                case 'ArrowDown': enemy.attack(); break;
-            }
-        });
-        window.addEventListener('keyup', (event) => {
-            switch (event.key) {
-                case 'd': keys.d.pressed = false; break;
-                case 'a': keys.a.pressed = false; break;
-                case 'ArrowRight': keys.ArrowRight.pressed = false; break;
-                case 'ArrowLeft': keys.ArrowLeft.pressed = false; break;
-            }
-        });
+    let player, enemy, timer = 60, timerId, gameRunning = false;
+    const keys = { a: {pressed:false}, d: {pressed:false}, ArrowLeft: {pressed:false}, ArrowRight: {pressed:false} };
+
+    function initMenu() {
+        document.getElementById('loading-msg').style.display = 'none';
+        const grid = document.getElementById('char-grid');
+        grid.style.display = 'grid';
         
-        // Reset
-        window.addEventListener('touchstart', (e) => {
-            if(e.target.classList.contains('btn')) return;
-            if(!gameRunning && player) location.reload();
-        });
-        window.addEventListener('click', () => {
-            if(!gameRunning && player) location.reload();
-        });
+        Object.keys(CHARACTERS_CONFIG).forEach(key => {
+            const char = CHARACTERS_CONFIG[key];
+            const div = document.createElement('div');
+            div.className = 'char-card';
+            
+            // Preview Face
+            const pc = document.createElement('canvas');
+            pc.width=50; pc.height=50;
+            const pctx = pc.getContext('2d');
+            pctx.drawImage(processedImages[key], 0, 0, 60, 60, 0, 0, 200, 200); // zoom simple
 
-        // Touch Logic
-        const btnLeft = document.getElementById('btn-left');
-        const btnRight = document.getElementById('btn-right');
-        const btnJump = document.getElementById('btn-jump');
-        const btnAttack = document.getElementById('btn-attack');
+            div.innerHTML = `<div class="char-preview" style="background-image:url(${pc.toDataURL()})"></div><span>${char.name}</span>`;
+            div.onclick = () => selectChar(key);
+            grid.appendChild(div);
+        });
+    }
 
-        function addTouchListener(elem, code, type) {
-            elem.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                if(!gameRunning) return;
-                if (type === 'move') { keys[code].pressed = true; player.lastKey = code; }
-                else if (type === 'jump') player.velocity.y = -15;
-                else if (type === 'attack') player.attack();
-            }, { passive: false });
-            elem.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                if (type === 'move') keys[code].pressed = false;
-            });
+    let p1Sel = null;
+    function selectChar(k) {
+        if(!p1Sel) {
+            p1Sel = k;
+            document.getElementById('select-instruction').innerText = "JUGADOR 2";
+        } else {
+            document.getElementById('character-select').style.display = 'none';
+            startGame(p1Sel, k);
         }
-        addTouchListener(btnLeft, 'a', 'move');
-        addTouchListener(btnRight, 'd', 'move');
-        addTouchListener(btnJump, 'w', 'jump');
-        addTouchListener(btnAttack, 'space', 'attack');
+    }
 
-        loadAllCharacters();
-    </script>
+    function startGame(k1, k2) {
+        document.getElementById('game-ui').style.display = 'block';
+        document.getElementById('mobile-controls').style.display = 'block';
+        
+        const c1 = CHARACTERS_CONFIG[k1];
+        const c2 = CHARACTERS_CONFIG[k2];
+
+        document.getElementById('p1-name').innerText = c1.name;
+        document.getElementById('p2-name').innerText = c2.name;
+
+        player = new Fighter({
+            position: {x: 200, y: 0}, velocity: {x:0, y:0},
+            image: processedImages[k1], scale: c1.scale, offset: c1.offset, name: c1.name
+        });
+        enemy = new Fighter({
+            position: {x: 800, y: 0}, velocity: {x:0, y:0},
+            image: processedImages[k2], scale: c2.scale, offset: c2.offset, name: c2.name
+        });
+
+        gameRunning = true;
+        decreaseTimer();
+        animate();
+    }
+
+    function decreaseTimer() {
+        if(timer>0 && gameRunning) {
+            timerId = setTimeout(decreaseTimer, 1000);
+            timer--;
+            document.querySelector('.timer').innerText = timer;
+        }
+        if(timer===0) endGame();
+    }
+
+    function rectCol(r1, r2) {
+        return (r1.attackBox.position.x + r1.attackBox.width >= r2.position.x &&
+                r1.attackBox.position.x <= r2.position.x + r2.width &&
+                r1.attackBox.position.y + r1.attackBox.height >= r2.position.y &&
+                r1.attackBox.position.y <= r2.position.y + r2.height);
+    }
+
+    function endGame() {
+        gameRunning = false;
+        clearTimeout(timerId);
+        document.getElementById('displayText').style.display = 'block';
+        const txt = document.getElementById('winnerText');
+        if(player.health === enemy.health) txt.innerText = "EMPATE";
+        else if(player.health > enemy.health) txt.innerText = "P1 GANA";
+        else txt.innerText = "P2 GANA";
+    }
+
+    function animate() {
+        if(!gameRunning) return;
+        window.requestAnimationFrame(animate);
+        
+        // Clear & BG
+        c.clearRect(0,0,canvas.width, canvas.height);
+        drawBackground();
+
+        player.update();
+        enemy.update();
+
+        // P1 Move
+        player.velocity.x = 0;
+        if(keys.a.pressed) { player.velocity.x = -5; player.switchSprite(1); }
+        else if(keys.d.pressed) { player.velocity.x = 5; player.switchSprite(1); }
+        else player.switchSprite(0);
+
+        // P2 Move (IA simple follow)
+        enemy.velocity.x = 0;
+        if(keys.ArrowLeft.pressed) { enemy.velocity.x = -5; enemy.switchSprite(1); }
+        else if(keys.ArrowRight.pressed) { enemy.velocity.x = 5; enemy.switchSprite(1); }
+        else enemy.switchSprite(0);
+
+        // Hitbox P1
+        if(rectCol(player, enemy) && player.isAttacking && player.framesCurrent===2) {
+            enemy.takeHit();
+            player.isAttacking = false;
+            document.getElementById('enemyHealth').style.width = enemy.health + '%';
+        }
+        if(player.isAttacking && player.framesCurrent===2) player.isAttacking=false;
+
+        // Hitbox P2
+        if(rectCol(enemy, player) && enemy.isAttacking && enemy.framesCurrent===2) {
+            player.takeHit();
+            enemy.isAttacking = false;
+            document.getElementById('playerHealth').style.width = player.health + '%';
+        }
+        if(enemy.isAttacking && enemy.framesCurrent===2) enemy.isAttacking=false;
+
+        if(player.health<=0 || enemy.health<=0) endGame();
+    }
+
+    // Controls
+    window.addEventListener('keydown', e => {
+        if(!gameRunning) return;
+        switch(e.key) {
+            case 'd': keys.d.pressed=true; break;
+            case 'a': keys.a.pressed=true; break;
+            case 'w': player.velocity.y = -15; break;
+            case ' ': player.attack(); break;
+            
+            case 'ArrowRight': keys.ArrowRight.pressed=true; break;
+            case 'ArrowLeft': keys.ArrowLeft.pressed=true; break;
+            case 'ArrowUp': enemy.velocity.y = -15; break;
+            case 'ArrowDown': enemy.attack(); break;
+        }
+    });
+    window.addEventListener('keyup', e => {
+        switch(e.key) {
+            case 'd': keys.d.pressed=false; break;
+            case 'a': keys.a.pressed=false; break;
+            case 'ArrowRight': keys.ArrowRight.pressed=false; break;
+            case 'ArrowLeft': keys.ArrowLeft.pressed=false; break;
+        }
+    });
+
+    // Touch
+    const setupTouch = (id, action, val) => {
+        const btn = document.getElementById(id);
+        btn.addEventListener('touchstart', e => {
+            e.preventDefault();
+            if(!gameRunning) return;
+            if(action === 'move') keys[val].pressed = true;
+            if(action === 'jump') player.velocity.y = -15;
+            if(action === 'attack') player.attack();
+        });
+        btn.addEventListener('touchend', e => {
+            e.preventDefault();
+            if(action === 'move') keys[val].pressed = false;
+        });
+    };
+
+    setupTouch('btn-left', 'move', 'a');
+    setupTouch('btn-right', 'move', 'd');
+    setupTouch('btn-jump', 'jump');
+    setupTouch('btn-attack', 'attack');
+
+    window.addEventListener('click', () => { if(!gameRunning && player) location.reload(); });
+
+    loadAssets();
+
+</script>
 </body>
 </html>
+
+
