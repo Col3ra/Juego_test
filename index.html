@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Amigos Kombat</title>
+    <title>Amigos Kombat - Debugged</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -83,12 +83,15 @@
 </div>
 
 <script>
-    // --- CONFIGURACIÓN ---
+    // --- CONFIGURACIÓN DE VISUALIZACIÓN ---
     const GLOBAL_SCALE = 0.8; 
     
-    // FIX: Aumentamos el offset Y negativo (-85) para bajar más a los personajes al suelo
-    const Y_OFFSET_FIX = -85; 
-    // Ajuste horizontal para centrar el hitbox en el sprite
+    // Y_OFFSET: Controla la altura vertical. 
+    // -85 sube el sprite hacia arriba (o baja el punto de anclaje). 
+    // Si siguen flotando, haz este número MENOS negativo (ej -60). Si se hunden, hazlo MÁS negativo (ej -100).
+    const Y_OFFSET_FIX = -80; 
+    
+    // X_OFFSET: Centra el sprite horizontalmente sobre su hitbox invisible
     const X_OFFSET_FIX = 135;
 
     const CHARACTERS_CONFIG = {
@@ -98,8 +101,7 @@
         rodri: { name: "Rodri", src: "./images/rodri.png", scale: GLOBAL_SCALE, offset: { x: X_OFFSET_FIX, y: Y_OFFSET_FIX } }
     };
 
-    // --- CHROMA KEY INTELIGENTE ---
-    // Esta función quita el fondo negro.
+    // --- PROCESAMIENTO DE IMAGEN (CHROMA KEY SUAVE) ---
     const processedImages = {};
     function removeBackground(src) {
         return new Promise((resolve) => {
@@ -113,18 +115,11 @@
                 ctx.drawImage(img, 0, 0);
                 const id = ctx.getImageData(0, 0, c.width, c.height);
                 const d = id.data;
-                
-                // REGLA: Solo borrar si es MUY oscuro (casi negro puro)
-                // Antes era < 50, eso borraba zapatos marrones y pelo negro.
-                // Ahora es < 20, mucho más seguro.
+                // Umbral muy bajo (20) para borrar solo el negro puro del fondo
+                // Esto evita que borre zapatos o ropa oscura.
                 for (let i = 0; i < d.length; i += 4) {
-                    const r = d[i], g = d[i+1], b = d[i+2];
-                    // Si el pixel es casi negro, hazlo transparente
-                    if (r < 25 && g < 25 && b < 25) {
-                        d[i+3] = 0; 
-                    }
+                    if (d[i] < 20 && d[i+1] < 20 && d[i+2] < 20) d[i+3] = 0;
                 }
-                
                 ctx.putImageData(id, 0, 0);
                 const newImg = new Image();
                 newImg.src = c.toDataURL();
@@ -142,7 +137,7 @@
         initMenu();
     }
 
-    // --- MOTOR GRÁFICO ---
+    // --- MOTOR DEL JUEGO ---
     const canvas = document.querySelector('canvas');
     const c = canvas.getContext('2d');
     canvas.width = 1024; canvas.height = 576;
@@ -158,7 +153,7 @@
         let g = c.createLinearGradient(0, 0, 0, canvas.height);
         g.addColorStop(0, "#0f0c29"); g.addColorStop(1, "#302b63");
         c.fillStyle = g; c.fillRect(0, 0, canvas.width, canvas.height);
-        
+
         c.fillStyle = "rgba(255,255,255,0.6)";
         stars.forEach(st => {
             c.fillRect(st.x, st.y, st.s, st.s);
@@ -180,18 +175,17 @@
             this.name = name;
             this.direction = direction;
             
-            this.width = 50; this.height = 150;
+            this.width = 50; // Ancho hitbox lógica
+            this.height = 150; // Alto hitbox lógica
             
-            // --- CORRECCIÓN PERSIANA ---
-            // Asumimos que la hoja de sprites tiene 8 columnas de ancho total.
-            // Esto es crucial para que el recorte sea consistente.
+            // CONSTANTE: La hoja de sprites tiene 8 columnas de ancho SIEMPRE.
             this.sheetColumns = 8;
+            this.sheetRows = 5;
 
-            this.framesMax = 4; 
+            this.framesMax = 4; // Frames de la animación actual
             this.framesCurrent = 0;
             this.framesElapsed = 0;
             this.framesHold = 8;
-            this.rows = 5; 
             this.currentRow = 0; 
             
             this.attackBox = { position: {x:0, y:0}, width: 120, height: 50 };
@@ -203,28 +197,40 @@
         draw() {
             if(!this.image) return;
 
-            // Calculamos el ancho de 1 frame dividiendo el ancho total por 8.
-            // Esto evita que al cambiar a animaciones de 4 frames, el ancho se duplique erróneamente.
-            const fw = this.image.width / this.sheetColumns; 
-            const fh = this.image.height / this.rows;
+            // CÁLCULO DE RECORTES (DEBUGGED)
+            // Ancho de 1 cuadro = Ancho total imagen / 8 (Fijo)
+            const frameWidth = this.image.width / this.sheetColumns;
+            const frameHeight = this.image.height / this.sheetRows;
 
-            const renderW = fw * this.scale;
-            const renderH = fh * this.scale;
+            // Dimensiones para dibujar en pantalla
+            const renderW = frameWidth * this.scale;
+            const renderH = frameHeight * this.scale;
+            
+            // Posición de dibujo ajustada con offset
             const drawX = this.position.x - this.offset.x;
             const drawY = this.position.y + this.height - renderH - this.offset.y;
 
             c.save();
+            // Invertir imagen si mira a la izquierda
             c.translate(this.position.x + this.width/2, this.position.y + this.height/2);
             c.scale(this.direction, 1);
             c.translate(-(this.position.x + this.width/2), -(this.position.y + this.height/2));
 
             c.drawImage(
                 this.image,
-                this.framesCurrent * fw, this.currentRow * fh, fw, fh,
-                drawX, drawY,
-                renderW, renderH
+                this.framesCurrent * frameWidth, // Recorte X: frame actual * ancho fijo
+                this.currentRow * frameHeight,   // Recorte Y: fila actual * alto fijo
+                frameWidth,                      // Ancho recorte
+                frameHeight,                     // Alto recorte
+                drawX,                           // Posición X pantalla
+                drawY,                           // Posición Y pantalla
+                renderW,                         // Ancho pantalla
+                renderH                          // Alto pantalla
             );
             c.restore();
+
+            // DEBUG: Descomenta esto para ver la caja roja de colisión real y verificar si tocan el suelo
+            // c.strokeStyle = 'red'; c.strokeRect(this.position.x, this.position.y, this.width, this.height);
         }
 
         update() {
@@ -232,19 +238,24 @@
             if(!this.dead) {
                 this.framesElapsed++;
                 if(this.framesElapsed % this.framesHold === 0) {
-                    if(this.framesCurrent < this.framesMax - 1) this.framesCurrent++;
-                    else this.framesCurrent = 0;
+                    // Loop de animación seguro
+                    if(this.framesCurrent < this.framesMax - 1) {
+                        this.framesCurrent++;
+                    } else {
+                        this.framesCurrent = 0;
+                    }
                 }
             }
 
-            const atkOffset = this.direction === 1 ? this.width : -this.attackBox.width;
+            // Hitbox ataque
+            const atkOffset = this.direction === 1 ? 0 : -this.attackBox.width + this.width;
             this.attackBox.position.x = this.position.x + atkOffset;
             this.attackBox.position.y = this.position.y + 40;
 
             this.position.x += this.velocity.x;
             this.position.y += this.velocity.y;
 
-            // Suelo
+            // Física de Suelo
             if (this.position.y + this.height + this.velocity.y >= canvas.height - 80) {
                 this.velocity.y = 0;
                 this.position.y = canvas.height - 80 - this.height;
@@ -252,6 +263,7 @@
                 this.velocity.y += gravity;
             }
 
+            // Límites pantalla
             if(this.position.x < 0) this.position.x = 0;
             if(this.position.x + this.width > canvas.width) this.position.x = canvas.width - this.width;
         }
@@ -260,6 +272,7 @@
         takeHit() { this.health -= 10; if(this.health <= 0) this.switchSprite(4, true); else this.switchSprite(4); }
 
         switchSprite(row, isDead = false) {
+            // Prioridades de animación (No interrumpir golpe, muerte o daño)
             if(this.currentRow === 4 && this.framesCurrent < this.framesMax - 1 && !this.dead) return;
             if(this.currentRow === 2 && this.framesCurrent < this.framesMax - 1) return;
             if(this.dead) return;
@@ -267,11 +280,12 @@
             if(this.currentRow !== row) {
                 this.currentRow = row;
                 this.framesCurrent = 0;
-                // Velocidades de animación ajustadas
-                if(row === 0) { this.framesMax = 4; this.framesHold = 10; } // Idle lento
-                if(row === 1) { this.framesMax = 8; this.framesHold = 5; }  // Correr rápido
-                if(row === 2) { this.framesMax = 4; this.framesHold = 4; }  // Golpe
-                if(row === 4) { this.framesMax = 3; if(isDead) this.dead = true; }
+                
+                // Configuración frames por acción
+                if(row === 0) { this.framesMax = 4; this.framesHold = 10; } // Idle
+                if(row === 1) { this.framesMax = 8; this.framesHold = 5; }  // Run
+                if(row === 2) { this.framesMax = 4; this.framesHold = 4; }  // Attack
+                if(row === 4) { this.framesMax = 3; if(isDead) this.dead = true; } // Hurt/Die
             }
         }
     }
@@ -290,7 +304,7 @@
             const pc = document.createElement('canvas');
             pc.width=50; pc.height=50;
             const pctx = pc.getContext('2d');
-            // Preview usando el ancho de 1 columna
+            // Preview usando el ancho fijo de columna
             const fw = processedImages[key].width / 8; 
             pctx.drawImage(processedImages[key], 0, 0, fw, fw, 0, 0, 200, 200); 
             div.innerHTML = `<div class="char-preview" style="background-image:url(${pc.toDataURL()})"></div><span>${char.name}</span>`;
