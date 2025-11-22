@@ -17,37 +17,19 @@
         .player-name { font-size: 10px; margin-bottom: 4px; text-shadow: 2px 2px 0 #000; }
         .health-bar-container { width: 100%; height: 15px; background: #555; border: 2px solid #fff; }
         .health-bar { height: 100%; background: #4ade80; transition: width 0.1s linear; }
-        #enemyHealth { background: #4ade80; float: right; }
+        #enemyHealth { background: #f87171; float: right; }
         .timer { width: 30px; height: 30px; background: #222; border: 2px solid #fff; display: flex; justify-content: center; align-items: center; font-size: 14px; }
         
         .overlay-text { 
-            position: absolute; 
-            top: 35%; 
-            left: 50%; 
-            transform: translate(-50%, -50%); 
-            font-size: 30px; 
-            display: none; 
-            z-index: 20; 
-            text-shadow: 3px 3px 0 #000; 
-            text-align: center; 
-            width: 100%; 
-            flex-direction: column; /* Para alinear texto y botón */
-            align-items: center;
-            pointer-events: auto; /* Permitir click en el botón */
+            position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); 
+            font-size: 30px; display: none; z-index: 20; text-shadow: 3px 3px 0 #000; 
+            text-align: center; width: 100%; flex-direction: column; align-items: center; pointer-events: auto; 
         }
 
         #restart-btn {
-            margin-top: 20px;
-            background: #e94560;
-            border: 2px solid white;
-            color: white;
-            font-family: 'Press Start 2P', cursive;
-            padding: 15px 20px;
-            font-size: 12px;
-            cursor: pointer;
-            box-shadow: 4px 4px 0 #000;
-            display: none; /* Oculto por defecto */
-            pointer-events: auto;
+            margin-top: 20px; background: #e94560; border: 2px solid white; color: white;
+            font-family: 'Press Start 2P', cursive; padding: 15px 20px; font-size: 12px;
+            cursor: pointer; box-shadow: 4px 4px 0 #000; display: none; pointer-events: auto;
         }
         #restart-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
 
@@ -196,7 +178,7 @@
         }
     };
 
-    // --- IMAGENES ---
+    // --- CHROMA KEY AJUSTADO (47) ---
     const processedImages = {};
     function removeBackground(src) {
         return new Promise((resolve) => {
@@ -210,8 +192,11 @@
                 ctx.drawImage(img, 0, 0);
                 const id = ctx.getImageData(0, 0, c.width, c.height);
                 const d = id.data;
+                // Ajustado al valor que pediste: 47
                 for (let i = 0; i < d.length; i += 4) {
-                    if (d[i] < 47 && d[i+1] < 47 && d[i+2] < 47) d[i+3] = 0;
+                    if (d[i] < 47 && d[i+1] < 47 && d[i+2] < 47) {
+                        d[i+3] = 0; 
+                    }
                 }
                 ctx.putImageData(id, 0, 0);
                 const newImg = new Image();
@@ -240,7 +225,6 @@
         let g = c.createLinearGradient(0, 0, 0, canvas.height);
         g.addColorStop(0, "#0f0c29"); g.addColorStop(1, "#302b63");
         c.fillStyle = g; c.fillRect(0, 0, canvas.width, canvas.height);
-        
         if(!window.stars) window.stars = Array(50).fill().map(()=>({x:Math.random()*1024,y:Math.random()*576,s:Math.random()*2}));
         c.fillStyle = "rgba(255,255,255,0.6)";
         window.stars.forEach(st => c.fillRect(st.x, st.y, st.s, st.s));
@@ -259,11 +243,18 @@
             this.direction = direction;
             this.isAI = isAI;
             
-            this.width = 50; this.height = 150;
+            this.width = 50; 
+            this.height = 150;
+            
+            // FIX DE HITBOX:
+            // Aumentamos el ancho de la caja de ataque a 200 (antes 120) para mayor alcance.
+            // Aumentamos la altura a 80 (antes 50) para acertar más fácil.
+            this.attackBox = { position: {x:0, y:0}, width: 200, height: 80 };
+            
             this.sheetColumns = 8; this.rows = 5;
             this.framesMax = 4; this.framesCurrent = 0;
             this.framesElapsed = 0; this.framesHold = 8; this.currentRow = 0; 
-            this.attackBox = { position: {x:0, y:0}, width: 120, height: 50 };
+            
             this.isAttacking = false;
             this.health = 100;
             this.dead = false;
@@ -284,6 +275,14 @@
             c.translate(-(this.position.x + this.width/2), -(this.position.y + this.height/2));
             c.drawImage(this.image, this.framesCurrent * frameWidth, this.currentRow * frameHeight, frameWidth, frameHeight, drawX, drawY, renderW, renderH);
             c.restore();
+            
+            // DEBUG: Descomenta esto para ver la caja de ataque (verde) cuando pegas
+            /*
+            if(this.isAttacking) {
+                c.fillStyle = 'rgba(0, 255, 0, 0.5)';
+                c.fillRect(this.attackBox.position.x, this.attackBox.position.y, this.attackBox.width, this.attackBox.height);
+            }
+            */
         }
 
         update(target) {
@@ -295,10 +294,11 @@
                 }
             }
 
-            // IA Simple
+            // IA
             if (this.isAI && !this.dead && target && !target.dead) {
                 const dist = Math.abs(this.position.x - target.position.x);
-                if (dist > 80) {
+                // Acortamos la distancia para atacar (100px) para que la IA se acerque más
+                if (dist > 100) { 
                     if (target.position.x < this.position.x) { this.velocity.x = -4; this.switchSprite(1); }
                     else { this.velocity.x = 4; this.switchSprite(1); }
                 } else {
@@ -307,9 +307,14 @@
                 }
             }
 
+            // FIX DIRECCIÓN HITBOX:
+            // Calculamos el offset de la caja de ataque basado en la dirección.
+            // Si mira a la derecha (1): empieza en la posición X (borde izquierdo del cuerpo) y se extiende 200px.
+            // Si mira a la izquierda (-1): empieza 200px a la izquierda + 50px (ancho cuerpo) = -150px offset.
             const atkOffset = this.direction === 1 ? 0 : -this.attackBox.width + this.width;
+            
             this.attackBox.position.x = this.position.x + atkOffset;
-            this.attackBox.position.y = this.position.y + 40;
+            this.attackBox.position.y = this.position.y + 40; // Altura del golpe
 
             this.position.x += this.velocity.x;
             this.position.y += this.velocity.y;
@@ -424,10 +429,8 @@
         gameRunning = false;
         clearInterval(musicInterval);
         clearTimeout(timerId);
-        // Mostrar texto y botón
-        document.getElementById('displayText').style.display = 'flex'; // Flex para centrar
+        document.getElementById('displayText').style.display = 'flex';
         document.getElementById('restart-btn').style.display = 'block';
-        
         const txt = document.getElementById('winnerText');
         if(player.health === enemy.health) txt.innerText = "EMPATE";
         else if(player.health > enemy.health) txt.innerText = "P1 GANA";
@@ -453,6 +456,7 @@
         else if(keys.d.pressed) { player.velocity.x = 5; player.switchSprite(1); }
         else player.switchSprite(0);
 
+        // Colisiones P1 -> Enemy
         if(rectCol(player, enemy) && player.isAttacking && player.framesCurrent===2) {
             enemy.takeHit();
             player.isAttacking = false;
@@ -460,6 +464,7 @@
         }
         if(player.isAttacking && player.framesCurrent===2) player.isAttacking=false;
 
+        // Colisiones Enemy -> P1
         if(rectCol(enemy, player) && enemy.isAttacking && enemy.framesCurrent===2) {
             player.takeHit();
             enemy.isAttacking = false;
