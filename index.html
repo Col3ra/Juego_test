@@ -11,7 +11,6 @@
         #game-container { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background: #1a1a1a; }
         canvas { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
         
-        /* UI Layers */
         .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: none; }
         .top-bar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: space-between; width: 90%; max-width: 600px; }
         .health-wrapper { width: 40%; }
@@ -22,14 +21,12 @@
         .timer { width: 30px; height: 30px; background: #222; border: 2px solid #fff; display: flex; justify-content: center; align-items: center; font-size: 14px; }
         .overlay-text { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 30px; display: none; z-index: 20; text-shadow: 3px 3px 0 #000; text-align: center; width: 100%; }
 
-        /* Menu */
         #character-select { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #121212; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         #character-select h2 { margin-bottom: 15px; font-size: 16px; color: #e94560; }
         .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .char-card { background: #222; border: 2px solid #444; padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; }
         .char-preview { width: 50px; height: 50px; background-size: 400%; background-position: 0 0; border-radius: 50%; margin: 0 auto 5px auto; background-color: #000; }
 
-        /* Controls */
         #mobile-controls { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
         .control-area-left { position: absolute; bottom: 20px; left: 20px; width: 160px; height: 160px; pointer-events: auto; }
         .control-area-right { position: absolute; bottom: 20px; right: 20px; width: 160px; height: 160px; pointer-events: auto; }
@@ -86,12 +83,13 @@
 </div>
 
 <script>
+    // --- CONFIGURACIÓN ---
     const GLOBAL_SCALE = 0.8; 
     
-    // FIX PISO: Bajamos más el offset negativo (-75)
-    const Y_OFFSET_FIX = -75; 
-    // Centrado horizontal
-    const X_OFFSET_FIX = 130;
+    // FIX: Aumentamos el offset Y negativo (-85) para bajar más a los personajes al suelo
+    const Y_OFFSET_FIX = -85; 
+    // Ajuste horizontal para centrar el hitbox en el sprite
+    const X_OFFSET_FIX = 135;
 
     const CHARACTERS_CONFIG = {
         juan:  { name: "Juan",  src: "./images/juan.png",  scale: GLOBAL_SCALE, offset: { x: X_OFFSET_FIX, y: Y_OFFSET_FIX } },
@@ -100,7 +98,8 @@
         rodri: { name: "Rodri", src: "./images/rodri.png", scale: GLOBAL_SCALE, offset: { x: X_OFFSET_FIX, y: Y_OFFSET_FIX } }
     };
 
-    // PROCESAMIENTO IMAGEN
+    // --- CHROMA KEY INTELIGENTE ---
+    // Esta función quita el fondo negro.
     const processedImages = {};
     function removeBackground(src) {
         return new Promise((resolve) => {
@@ -114,9 +113,18 @@
                 ctx.drawImage(img, 0, 0);
                 const id = ctx.getImageData(0, 0, c.width, c.height);
                 const d = id.data;
+                
+                // REGLA: Solo borrar si es MUY oscuro (casi negro puro)
+                // Antes era < 50, eso borraba zapatos marrones y pelo negro.
+                // Ahora es < 20, mucho más seguro.
                 for (let i = 0; i < d.length; i += 4) {
-                    if (d[i] < 50 && d[i+1] < 50 && d[i+2] < 50) d[i+3] = 0;
+                    const r = d[i], g = d[i+1], b = d[i+2];
+                    // Si el pixel es casi negro, hazlo transparente
+                    if (r < 25 && g < 25 && b < 25) {
+                        d[i+3] = 0; 
+                    }
                 }
+                
                 ctx.putImageData(id, 0, 0);
                 const newImg = new Image();
                 newImg.src = c.toDataURL();
@@ -134,7 +142,7 @@
         initMenu();
     }
 
-    // MOTOR
+    // --- MOTOR GRÁFICO ---
     const canvas = document.querySelector('canvas');
     const c = canvas.getContext('2d');
     canvas.width = 1024; canvas.height = 576;
@@ -150,11 +158,14 @@
         let g = c.createLinearGradient(0, 0, 0, canvas.height);
         g.addColorStop(0, "#0f0c29"); g.addColorStop(1, "#302b63");
         c.fillStyle = g; c.fillRect(0, 0, canvas.width, canvas.height);
+        
         c.fillStyle = "rgba(255,255,255,0.6)";
         stars.forEach(st => {
             c.fillRect(st.x, st.y, st.s, st.s);
             st.x -= st.v; if(st.x < 0) st.x = canvas.width;
         });
+
+        // Suelo
         c.fillStyle = "#1a1a1a"; c.fillRect(0, canvas.height - 80, canvas.width, 80);
         c.fillStyle = "#333"; c.fillRect(0, canvas.height - 80, canvas.width, 4);
     }
@@ -169,10 +180,11 @@
             this.name = name;
             this.direction = direction;
             
-            this.width = 50; 
-            this.height = 150; 
+            this.width = 50; this.height = 150;
             
-            // FIX PERSIANA 1: Definimos que la imagen SIEMPRE tiene 8 columnas
+            // --- CORRECCIÓN PERSIANA ---
+            // Asumimos que la hoja de sprites tiene 8 columnas de ancho total.
+            // Esto es crucial para que el recorte sea consistente.
             this.sheetColumns = 8;
 
             this.framesMax = 4; 
@@ -191,14 +203,14 @@
         draw() {
             if(!this.image) return;
 
-            // FIX PERSIANA 2: Usamos sheetColumns (8) en lugar de framesMax para calcular el ancho
+            // Calculamos el ancho de 1 frame dividiendo el ancho total por 8.
+            // Esto evita que al cambiar a animaciones de 4 frames, el ancho se duplique erróneamente.
             const fw = this.image.width / this.sheetColumns; 
             const fh = this.image.height / this.rows;
 
             const renderW = fw * this.scale;
             const renderH = fh * this.scale;
             const drawX = this.position.x - this.offset.x;
-            // Offset Y más agresivo para el piso
             const drawY = this.position.y + this.height - renderH - this.offset.y;
 
             c.save();
@@ -219,7 +231,6 @@
             this.draw();
             if(!this.dead) {
                 this.framesElapsed++;
-                // Control de velocidad de animación
                 if(this.framesElapsed % this.framesHold === 0) {
                     if(this.framesCurrent < this.framesMax - 1) this.framesCurrent++;
                     else this.framesCurrent = 0;
@@ -233,6 +244,7 @@
             this.position.x += this.velocity.x;
             this.position.y += this.velocity.y;
 
+            // Suelo
             if (this.position.y + this.height + this.velocity.y >= canvas.height - 80) {
                 this.velocity.y = 0;
                 this.position.y = canvas.height - 80 - this.height;
@@ -255,24 +267,11 @@
             if(this.currentRow !== row) {
                 this.currentRow = row;
                 this.framesCurrent = 0;
-                
-                // CONFIGURACIÓN FINA DE ANIMACIONES
-                if(row === 0) { 
-                    this.framesMax = 4; 
-                    this.framesHold = 10; // Idle lento
-                }
-                if(row === 1) { 
-                    this.framesMax = 8; 
-                    this.framesHold = 5; // Correr rápido
-                }
-                if(row === 2) { 
-                    this.framesMax = 4; // Ajustado a 4 para evitar cortes en sprites cortos
-                    this.framesHold = 4; // Golpe muy rápido
-                }
-                if(row === 4) {
-                    this.framesMax = 3; 
-                    if(isDead) this.dead = true;
-                }
+                // Velocidades de animación ajustadas
+                if(row === 0) { this.framesMax = 4; this.framesHold = 10; } // Idle lento
+                if(row === 1) { this.framesMax = 8; this.framesHold = 5; }  // Correr rápido
+                if(row === 2) { this.framesMax = 4; this.framesHold = 4; }  // Golpe
+                if(row === 4) { this.framesMax = 3; if(isDead) this.dead = true; }
             }
         }
     }
@@ -291,6 +290,7 @@
             const pc = document.createElement('canvas');
             pc.width=50; pc.height=50;
             const pctx = pc.getContext('2d');
+            // Preview usando el ancho de 1 columna
             const fw = processedImages[key].width / 8; 
             pctx.drawImage(processedImages[key], 0, 0, fw, fw, 0, 0, 200, 200); 
             div.innerHTML = `<div class="char-preview" style="background-image:url(${pc.toDataURL()})"></div><span>${char.name}</span>`;
