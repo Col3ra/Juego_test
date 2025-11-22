@@ -83,12 +83,7 @@
 </div>
 
 <script>
-    // --- CALIBRACIÓN ---
-    const GLOBAL_SCALE = 0.75; // Escala un poco más pequeña para que quepan bien
-    
-    // OFFSET PARA CENTRAR Y BAJAR AL PISO
-    // Y: -95 baja bastante el sprite para que los pies toquen la línea negra del suelo.
-    // X: 135 centra el sprite horizontalmente en su caja.
+    const GLOBAL_SCALE = 0.8; 
     const OFFSET = { x: 135, y: -95 };
 
     const CHARACTERS_CONFIG = {
@@ -98,7 +93,8 @@
         rodri: { name: "Rodri", src: "./images/rodri.png", scale: GLOBAL_SCALE, offset: OFFSET }
     };
 
-    // CHROMA KEY (Filtro de fondo negro)
+    // --- CHROMA KEY INTELIGENTE V2 ---
+    // Toma el color de la esquina superior izquierda (0,0) y lo usa como referencia para borrar
     const processedImages = {};
     function removeBackground(src) {
         return new Promise((resolve) => {
@@ -112,10 +108,23 @@
                 ctx.drawImage(img, 0, 0);
                 const id = ctx.getImageData(0, 0, c.width, c.height);
                 const d = id.data;
-                // Filtro suave: Solo borra negro muy puro para no romper la ropa
+                
+                // 1. Muestrear el color de fondo (pixel 0,0)
+                const bgR = d[0];
+                const bgG = d[1];
+                const bgB = d[2];
+                const tolerance = 30; // Tolerancia para no borrar pixels similares
+
                 for (let i = 0; i < d.length; i += 4) {
-                    if (d[i] < 30 && d[i+1] < 30 && d[i+2] < 30) d[i+3] = 0;
+                    const r = d[i], g = d[i+1], b = d[i+2];
+                    // Si el pixel se parece al fondo, borrarlo
+                    if (Math.abs(r - bgR) < tolerance && 
+                        Math.abs(g - bgG) < tolerance && 
+                        Math.abs(b - bgB) < tolerance) {
+                        d[i+3] = 0; // Alpha 0
+                    }
                 }
+                
                 ctx.putImageData(id, 0, 0);
                 const newImg = new Image();
                 newImg.src = c.toDataURL();
@@ -133,19 +142,16 @@
         initMenu();
     }
 
-    // MOTOR
     const canvas = document.querySelector('canvas');
     const c = canvas.getContext('2d');
     canvas.width = 1024; canvas.height = 576;
     const gravity = 0.6;
 
     function drawBackground() {
-        // Cielo
         let g = c.createLinearGradient(0, 0, 0, canvas.height);
         g.addColorStop(0, "#0f0c29"); g.addColorStop(1, "#302b63");
         c.fillStyle = g; c.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Estrellas estáticas (para rendimiento y evitar parpadeo de fondo)
         if(!window.stars) {
             window.stars = Array(50).fill().map(() => ({
                 x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2
@@ -154,7 +160,6 @@
         c.fillStyle = "rgba(255,255,255,0.6)";
         window.stars.forEach(st => c.fillRect(st.x, st.y, st.s, st.s));
 
-        // Suelo
         c.fillStyle = "#1a1a1a"; c.fillRect(0, canvas.height - 80, canvas.width, 80);
         c.fillStyle = "#333"; c.fillRect(0, canvas.height - 80, canvas.width, 4);
     }
@@ -171,12 +176,13 @@
             
             this.width = 50; this.height = 150;
             
-            // CONFIGURACIÓN INICIAL
-            this.framesMax = 4; // Empezamos con Idle que tiene 4
+            this.sheetColumns = 8; // Ancho de hoja fijo
+            this.rows = 5; // Alto de hoja fijo
+
+            this.framesMax = 4; 
             this.framesCurrent = 0;
             this.framesElapsed = 0;
-            this.framesHold = 10; // Idle lento
-            this.rows = 5; 
+            this.framesHold = 8;
             this.currentRow = 0; 
             
             this.attackBox = { position: {x:0, y:0}, width: 120, height: 50 };
@@ -188,11 +194,9 @@
         draw() {
             if(!this.image) return;
 
-            // --- CORRECCIÓN CRÍTICA DE LÓGICA ---
-            // Volvemos a usar this.framesMax para el cálculo.
-            // Cuando esté quieto (Idle), framesMax será 4 -> divide ancho por 4 -> Sprite ancho correcto.
-            // Cuando camine (Run), framesMax será 8 -> divide ancho por 8 -> Sprite angosto correcto.
-            const frameWidth = this.image.width / this.framesMax;
+            // CORTE DINÁMICO
+            // Usamos sheetColumns (8) para calcular el ancho base de un tile
+            const frameWidth = this.image.width / this.sheetColumns;
             const frameHeight = this.image.height / this.rows;
 
             const renderW = frameWidth * this.scale;
@@ -207,11 +211,11 @@
 
             c.drawImage(
                 this.image,
-                this.framesCurrent * frameWidth, // X en la imagen fuente
-                this.currentRow * frameHeight,   // Y en la imagen fuente
-                frameWidth,                      // Ancho a recortar
-                frameHeight,                     // Alto a recortar
-                drawX, drawY, renderW, renderH   // Dónde y qué tamaño dibujar en canvas
+                this.framesCurrent * frameWidth, 
+                this.currentRow * frameHeight,   
+                frameWidth,                      
+                frameHeight,                     
+                drawX, drawY, renderW, renderH   
             );
             c.restore();
         }
@@ -229,7 +233,7 @@
                 }
             }
 
-            const atkOffset = this.direction === 1 ? this.width : -this.attackBox.width;
+            const atkOffset = this.direction === 1 ? 0 : -this.attackBox.width + this.width;
             this.attackBox.position.x = this.position.x + atkOffset;
             this.attackBox.position.y = this.position.y + 40;
 
@@ -259,28 +263,11 @@
                 this.currentRow = row;
                 this.framesCurrent = 0;
                 
-                // --- MAPEO CORRECTO DE FRAMES SEGÚN TUS IMÁGENES ---
-                // Fila 0 (Idle): Tiene 4 dibujos.
-                // Fila 1 (Run): Tiene 8 dibujos.
-                // Fila 2 (Punch): Tiene 4 dibujos (basado en lo que veo, si se ve mal prueba con 6).
-                // Fila 4 (Hurt/Dead): Tiene 3 dibujos.
-                
-                if(row === 0) { 
-                    this.framesMax = 4; 
-                    this.framesHold = 10; 
-                }
-                if(row === 1) { 
-                    this.framesMax = 5; 
-                    this.framesHold = 5; 
-                }
-                if(row === 2) { 
-                    this.framesMax = 3; // Ajustado a 4 según inspección visual
-                    this.framesHold = 5; 
-                }
-                if(row === 4) { 
-                    this.framesMax = 3; 
-                    if(isDead) this.dead = true; 
-                }
+                // --- TUS AJUSTES DE FRAMES ---
+                if(row === 0) { this.framesMax = 4; this.framesHold = 10; } // Idle
+                if(row === 1) { this.framesMax = 5; this.framesHold = 6; }  // Run (5 frames)
+                if(row === 2) { this.framesMax = 3; this.framesHold = 5; }  // Attack (3 frames)
+                if(row === 4) { this.framesMax = 3; if(isDead) this.dead = true; }
             }
         }
     }
@@ -299,8 +286,7 @@
             const pc = document.createElement('canvas');
             pc.width=50; pc.height=50;
             const pctx = pc.getContext('2d');
-            // Preview: Usamos width/4 para Idle que es la primera fila
-            const fw = processedImages[key].width / 4; 
+            const fw = processedImages[key].width / 8; 
             pctx.drawImage(processedImages[key], 0, 0, fw, fw, 0, 0, 200, 200); 
             div.innerHTML = `<div class="char-preview" style="background-image:url(${pc.toDataURL()})"></div><span>${char.name}</span>`;
             div.onclick = () => selectChar(key);
