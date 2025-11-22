@@ -93,8 +93,8 @@
         rodri: { name: "Rodri", src: "./images/rodri.png", scale: GLOBAL_SCALE, offset: OFFSET }
     };
 
-    // --- CHROMA KEY INTELIGENTE V2 ---
-    // Toma el color de la esquina superior izquierda (0,0) y lo usa como referencia para borrar
+    // --- CHROMA KEY SIMPLE Y ROBUSTO ---
+    // Elimina pixels muy oscuros (negro de fondo)
     const processedImages = {};
     function removeBackground(src) {
         return new Promise((resolve) => {
@@ -108,23 +108,13 @@
                 ctx.drawImage(img, 0, 0);
                 const id = ctx.getImageData(0, 0, c.width, c.height);
                 const d = id.data;
-                
-                // 1. Muestrear el color de fondo (pixel 0,0)
-                const bgR = d[0];
-                const bgG = d[1];
-                const bgB = d[2];
-                const tolerance = 30; // Tolerancia para no borrar pixels similares
-
+                // Umbral fijo y seguro para pixel art con fondo negro
                 for (let i = 0; i < d.length; i += 4) {
-                    const r = d[i], g = d[i+1], b = d[i+2];
-                    // Si el pixel se parece al fondo, borrarlo
-                    if (Math.abs(r - bgR) < tolerance && 
-                        Math.abs(g - bgG) < tolerance && 
-                        Math.abs(b - bgB) < tolerance) {
-                        d[i+3] = 0; // Alpha 0
+                    // Si r, g y b son menores a 30 (muy oscuro), hacerlo transparente
+                    if (d[i] < 30 && d[i+1] < 30 && d[i+2] < 30) {
+                        d[i+3] = 0; 
                     }
                 }
-                
                 ctx.putImageData(id, 0, 0);
                 const newImg = new Image();
                 newImg.src = c.toDataURL();
@@ -176,8 +166,8 @@
             
             this.width = 50; this.height = 150;
             
-            this.sheetColumns = 8; // Ancho de hoja fijo
-            this.rows = 5; // Alto de hoja fijo
+            this.sheetColumns = 8; 
+            this.rows = 5;
 
             this.framesMax = 4; 
             this.framesCurrent = 0;
@@ -194,9 +184,9 @@
         draw() {
             if(!this.image) return;
 
-            // CORTE DINÁMICO
-            // Usamos sheetColumns (8) para calcular el ancho base de un tile
-            const frameWidth = this.image.width / this.sheetColumns;
+            // RESTAURADO: Cálculo dinámico de ancho de frame
+            // Esto es lo que arregla el parpadeo "persiana" cuando están quietos.
+            const frameWidth = this.image.width / this.framesMax;
             const frameHeight = this.image.height / this.rows;
 
             const renderW = frameWidth * this.scale;
@@ -263,9 +253,9 @@
                 this.currentRow = row;
                 this.framesCurrent = 0;
                 
-                // --- TUS AJUSTES DE FRAMES ---
+                // RESTAURADO: Configuración manual de frames (la que funcionaba bien)
                 if(row === 0) { this.framesMax = 4; this.framesHold = 10; } // Idle
-                if(row === 1) { this.framesMax = 5; this.framesHold = 5; }  // Run (5 frames)
+                if(row === 1) { this.framesMax = 5; this.framesHold = 6; }  // Run (5 frames)
                 if(row === 2) { this.framesMax = 3; this.framesHold = 5; }  // Attack (3 frames)
                 if(row === 4) { this.framesMax = 3; if(isDead) this.dead = true; }
             }
@@ -286,7 +276,8 @@
             const pc = document.createElement('canvas');
             pc.width=50; pc.height=50;
             const pctx = pc.getContext('2d');
-            const fw = processedImages[key].width / 8; 
+            // Preview usando el ancho de 4 frames (Idle)
+            const fw = processedImages[key].width / 4; 
             pctx.drawImage(processedImages[key], 0, 0, fw, fw, 0, 0, 200, 200); 
             div.innerHTML = `<div class="char-preview" style="background-image:url(${pc.toDataURL()})"></div><span>${char.name}</span>`;
             div.onclick = () => selectChar(key);
