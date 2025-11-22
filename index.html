@@ -6,79 +6,39 @@
     <title>Amigos Kombat</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-touch-callout: none;
-        }
-
-        body {
-            background-color: #000;
-            margin: 0;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-            font-family: 'Press Start 2P', cursive;
-            color: white;
-            touch-action: none; 
-        }
-
-        #game-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #1a1a1a; 
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            object-fit: contain; 
-            image-rendering: pixelated;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+        body { background-color: #000; margin: 0; height: 100vh; width: 100vw; overflow: hidden; font-family: 'Press Start 2P', cursive; color: white; touch-action: none; }
+        #game-container { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background: #1a1a1a; }
+        canvas { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+        
         /* UI Layers */
         .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: none; }
         .top-bar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: space-between; width: 90%; max-width: 600px; }
-        
         .health-wrapper { width: 40%; }
         .player-name { font-size: 10px; margin-bottom: 4px; text-shadow: 2px 2px 0 #000; }
         .health-bar-container { width: 100%; height: 15px; background: #555; border: 2px solid #fff; }
         .health-bar { height: 100%; background: #4ade80; transition: width 0.2s; }
         #enemyHealth { background: #f87171; float: right; }
-        
         .timer { width: 30px; height: 30px; background: #222; border: 2px solid #fff; display: flex; justify-content: center; align-items: center; font-size: 14px; }
-
         .overlay-text { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 30px; display: none; z-index: 20; text-shadow: 3px 3px 0 #000; text-align: center; width: 100%; }
 
-        /* Selección de Personaje */
+        /* Selección */
         #character-select { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #121212; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         #character-select h2 { margin-bottom: 15px; font-size: 16px; color: #e94560; }
         .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .char-card { background: #222; border: 2px solid #444; padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; }
         .char-preview { width: 50px; height: 50px; background-size: 400%; background-position: 0 0; border-radius: 50%; margin: 0 auto 5px auto; background-color: #000; }
 
-        /* Controles mejorados para dedos */
+        /* Controles */
         #mobile-controls { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
         .control-area-left { position: absolute; bottom: 20px; left: 20px; width: 140px; height: 140px; pointer-events: auto; }
         .control-area-right { position: absolute; bottom: 20px; right: 20px; width: 140px; height: 140px; pointer-events: auto; }
-
         .btn { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; position: absolute; display: flex; justify-content: center; align-items: center; font-size: 20px; color: white; }
         .btn:active { background: rgba(255,255,255,0.4); }
-        
-        /* Posicionamiento ergonómico de botones */
         #btn-left { bottom: 0; left: 0; }
         #btn-right { bottom: 0; right: 0; }
         #btn-attack { bottom: 20px; left: 0; width: 70px; height: 70px; background: rgba(255,0,0,0.2); border-color: #e94560; }
         #btn-jump { bottom: 40px; right: 0; }
-
         #loading-msg { color: #888; font-size: 10px; margin-top: 10px; }
     </style>
 </head>
@@ -126,21 +86,22 @@
 </div>
 
 <script>
-    const GLOBAL_SCALE = 0.78;
+    // AJUSTES FINALES
+    const GLOBAL_SCALE = 0.8; // Escala reducida para evitar gigantes
     
-    // FIX 1: Offset negativo para bajar el dibujo al suelo
-    const Y_OFFSET_FIX = -55; 
-    const X_OFFSET_FIX = 130;
+    // Offset para centrar y bajar al piso.
+    // x: 125 centra el sprite horizontalmente
+    // y: -55 baja el sprite visualmente para tocar el piso
+    const OFFSET = { x: 125, y: -55 };
 
     const CHARACTERS_CONFIG = {
-        // FIX: Rutas respetando tu carpeta images
-        juan:  { name: "Juan",  src: "./images/juan.png",  scale: GLOBAL_SCALE, offset: { x: X_OFFSET_FIX, y: Y_OFFSET_FIX } },
-        fran:  { name: "Fran",  src: "./images/fran.png",  scale: GLOBAL_SCALE, offset: { x: X_OFFSET_FIX, y: Y_OFFSET_FIX } },
-        fede:  { name: "Fede",  src: "./images/fede.png",  scale: GLOBAL_SCALE, offset: { x: X_OFFSET_FIX, y: Y_OFFSET_FIX } },
-        rodri: { name: "Rodri", src: "./images/rodri.png", scale: GLOBAL_SCALE, offset: { x: X_OFFSET_FIX, y: Y_OFFSET_FIX } }
+        juan:  { name: "Juan",  src: "./images/juan.png",  scale: GLOBAL_SCALE, offset: OFFSET },
+        fran:  { name: "Fran",  src: "./images/fran.png",  scale: GLOBAL_SCALE, offset: OFFSET },
+        fede:  { name: "Fede",  src: "./images/fede.png",  scale: GLOBAL_SCALE, offset: OFFSET },
+        rodri: { name: "Rodri", src: "./images/rodri.png", scale: GLOBAL_SCALE, offset: OFFSET }
     };
 
-    // --- PROCESAMIENTO DE IMAGEN (CHROMA KEY) ---
+    // CHROMA KEY (Quitar fondo negro)
     const processedImages = {};
     function removeBackground(src) {
         return new Promise((resolve) => {
@@ -154,6 +115,7 @@
                 ctx.drawImage(img, 0, 0);
                 const id = ctx.getImageData(0, 0, c.width, c.height);
                 const d = id.data;
+                // Umbral de oscuridad para transparencia
                 for (let i = 0; i < d.length; i += 4) {
                     if (d[i] < 50 && d[i+1] < 50 && d[i+2] < 50) d[i+3] = 0;
                 }
@@ -174,15 +136,12 @@
         initMenu();
     }
 
-    // --- MOTOR ---
+    // MOTOR
     const canvas = document.querySelector('canvas');
     const c = canvas.getContext('2d');
-    canvas.width = 1024; 
-    canvas.height = 576;
-    
+    canvas.width = 1024; canvas.height = 576;
     const gravity = 0.6;
 
-    // Estrellas para el fondo
     const stars = Array(40).fill().map(() => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
@@ -192,23 +151,17 @@
 
     function drawBackground() {
         let g = c.createLinearGradient(0, 0, 0, canvas.height);
-        g.addColorStop(0, "#0f0c29"); 
-        g.addColorStop(1, "#302b63");
-        c.fillStyle = g; 
-        c.fillRect(0, 0, canvas.width, canvas.height);
+        g.addColorStop(0, "#0f0c29"); g.addColorStop(1, "#302b63");
+        c.fillStyle = g; c.fillRect(0, 0, canvas.width, canvas.height);
 
         c.fillStyle = "rgba(255,255,255,0.6)";
         stars.forEach(st => {
             c.fillRect(st.x, st.y, st.s, st.s);
-            st.x -= st.v;
-            if(st.x < 0) st.x = canvas.width;
+            st.x -= st.v; if(st.x < 0) st.x = canvas.width;
         });
 
-        // Suelo
-        c.fillStyle = "#1a1a1a";
-        c.fillRect(0, canvas.height - 80, canvas.width, 80);
-        c.fillStyle = "#333"; // Borde suelo
-        c.fillRect(0, canvas.height - 80, canvas.width, 4);
+        c.fillStyle = "#1a1a1a"; c.fillRect(0, canvas.height - 80, canvas.width, 80);
+        c.fillStyle = "#333"; c.fillRect(0, canvas.height - 80, canvas.width, 4);
     }
 
     class Fighter {
@@ -217,16 +170,12 @@
             this.velocity = velocity;
             this.image = image;
             this.scale = scale;
-            this.offset = offset; 
+            this.offset = offset;
             this.name = name;
-            this.direction = direction; 
+            this.direction = direction;
             
-            this.width = 50; 
-            this.height = 150; 
+            this.width = 50; this.height = 150;
             
-            // FIX 2: Definir columnas fijas (8) para evitar efecto persiana
-            this.sheetColumns = 8;
-
             this.framesMax = 4; 
             this.framesCurrent = 0;
             this.framesElapsed = 0;
@@ -234,7 +183,6 @@
             this.rows = 5; 
             this.currentRow = 0; 
             
-            this.lastKey;
             this.attackBox = { position: {x:0, y:0}, width: 120, height: 50 };
             this.isAttacking = false;
             this.health = 100;
@@ -243,25 +191,28 @@
 
         draw() {
             if(!this.image) return;
-            
-            // FIX 2 (Aplicación): Usar sheetColumns en lugar de framesMax
-            const fw = this.image.width / this.sheetColumns; 
+
+            // CORRECCIÓN CRÍTICA: Volvemos a usar framesMax dinámico
+            // Esto asegura que si la fila tiene 4 frames, cortamos 1/4.
+            // Si tiene 8 frames, cortamos 1/8.
+            const fw = this.image.width / this.framesMax;
             const fh = this.image.height / this.rows;
 
             const renderW = fw * this.scale;
             const renderH = fh * this.scale;
-
             const drawX = this.position.x - this.offset.x;
-            // FIX 1 (Aplicación): Bajar el dibujo usando offset negativo
+            // Aplicamos offset negativo para bajar el sprite
             const drawY = this.position.y + this.height - renderH - this.offset.y;
 
             c.save();
-            c.translate(drawX + renderW / 2, drawY);
+            c.translate(this.position.x + this.width/2, this.position.y + this.height/2);
             c.scale(this.direction, 1);
+            c.translate(-(this.position.x + this.width/2), -(this.position.y + this.height/2));
+
             c.drawImage(
                 this.image,
                 this.framesCurrent * fw, this.currentRow * fh, fw, fh,
-                -renderW / 2, 0,
+                drawX, drawY,
                 renderW, renderH
             );
             c.restore();
@@ -277,8 +228,7 @@
                 }
             }
 
-            // Attack box logic
-            const atkOffset = this.direction === 1 ? this.width : -this.attackBox.width;
+            const atkOffset = this.direction === 1 ? 0 : -this.attackBox.width + this.width;
             this.attackBox.position.x = this.position.x + atkOffset;
             this.attackBox.position.y = this.position.y + 40;
 
@@ -293,17 +243,12 @@
                 this.velocity.y += gravity;
             }
 
-            // Paredes
             if(this.position.x < 0) this.position.x = 0;
             if(this.position.x + this.width > canvas.width) this.position.x = canvas.width - this.width;
         }
 
         attack() { this.switchSprite(2); this.isAttacking = true; }
-        takeHit() { 
-            this.health -= 10; 
-            if(this.health <= 0) this.switchSprite(4, true); 
-            else this.switchSprite(4); 
-        }
+        takeHit() { this.health -= 10; if(this.health <= 0) this.switchSprite(4, true); else this.switchSprite(4); }
 
         switchSprite(row, isDead = false) {
             if(this.currentRow === 4 && this.framesCurrent < this.framesMax - 1 && !this.dead) return;
@@ -313,6 +258,7 @@
             if(this.currentRow !== row) {
                 this.currentRow = row;
                 this.framesCurrent = 0;
+                // Ajuste de frames por fila según las hojas generadas
                 if(row === 0) this.framesMax = 4; // Idle
                 if(row === 1) this.framesMax = 8; // Run
                 if(row === 2) this.framesMax = 4; // Punch
@@ -331,7 +277,6 @@
         document.getElementById('loading-msg').style.display = 'none';
         const grid = document.getElementById('char-grid');
         grid.style.display = 'grid';
-        
         Object.keys(CHARACTERS_CONFIG).forEach(key => {
             const char = CHARACTERS_CONFIG[key];
             const div = document.createElement('div');
@@ -339,7 +284,7 @@
             const pc = document.createElement('canvas');
             pc.width=50; pc.height=50;
             const pctx = pc.getContext('2d');
-            // Preview usando el ancho fijo (8 columnas)
+            // Preview: Usamos width/8 para adivinar el tamaño de cara
             const fw = processedImages[key].width / 8; 
             pctx.drawImage(processedImages[key], 0, 0, fw, fw, 0, 0, 200, 200); 
             div.innerHTML = `<div class="char-preview" style="background-image:url(${pc.toDataURL()})"></div><span>${char.name}</span>`;
@@ -362,7 +307,6 @@
     function startGame(k1, k2) {
         document.getElementById('game-ui').style.display = 'block';
         document.getElementById('mobile-controls').style.display = 'block';
-        
         const c1 = CHARACTERS_CONFIG[k1];
         const c2 = CHARACTERS_CONFIG[k2];
 
@@ -412,7 +356,6 @@
     function animate() {
         if(!gameRunning) return;
         window.requestAnimationFrame(animate);
-
         c.clearRect(0,0,canvas.width, canvas.height);
         drawBackground();
 
