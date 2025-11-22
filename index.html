@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Amigos Kombat</title>
+    <title>Amigos Kombat 8-Bit</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -36,15 +36,15 @@
         #btn-right { bottom: 10px; left: 80px; }
         #btn-attack { bottom: 20px; right: 80px; width: 75px; height: 75px; background: rgba(255,0,0,0.2); border-color: #e94560; }
         #btn-jump { bottom: 40px; right: 0; }
-        #loading-msg { color: #888; font-size: 10px; margin-top: 10px; }
         
-        /* Indicador de Audio */
-        #audio-hint { position: absolute; bottom: 10px; right: 10px; font-size: 8px; color: #555; }
+        #music-btn { position: absolute; top: 10px; right: 10px; z-index: 200; font-size: 20px; cursor: pointer; opacity: 0.5; }
     </style>
 </head>
 <body>
 
 <div id="game-container">
+    <div id="music-btn">🔇</div>
+
     <div id="character-select">
         <h2>SELECCIONA LUCHADOR</h2>
         <p id="select-instruction" style="color:#aaa; font-size:10px;">Jugador 1</p>
@@ -71,8 +71,6 @@
         <div style="font-size: 12px; margin-top: 10px; opacity: 0.7;">Toca para reiniciar</div>
     </div>
 
-    <div id="audio-hint">Sonido Activado</div>
-
     <canvas id="canvas"></canvas>
 
     <div id="mobile-controls">
@@ -98,25 +96,31 @@
         rodri: { name: "Rodri", src: "./images/rodri.png", scale: GLOBAL_SCALE, offset: OFFSET }
     };
 
-    // --- SISTEMA DE SONIDO RETRO ---
-    // Genera sonidos sin necesidad de archivos externos
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    const audioCtx = new AudioContext();
+    // --- SINTETIZADOR DE AUDIO 8-BIT (Sin archivos externos) ---
+    let audioCtx;
+    let isMuted = true;
+    let musicInterval;
     
-    // Música de fondo (Opcional: requiere archivo 'audio/music.mp3')
-    const bgMusic = new Audio('./audio/music.mp3');
-    bgMusic.loop = true;
-    bgMusic.volume = 0.4;
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        isMuted = false;
+        document.getElementById('music-btn').innerText = "🔊";
+        document.getElementById('music-btn').style.opacity = "1";
+        startMusic();
+    }
 
+    // Efecto de Golpe
     function playHitSound() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if(isMuted || !audioCtx) return;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        // Sonido de ruido blanco simulado para golpe
-        osc.type = 'square';
+        osc.type = 'square'; // Sonido retro
         osc.frequency.setValueAtTime(150, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
@@ -124,7 +128,56 @@
         osc.stop(audioCtx.currentTime + 0.1);
     }
 
-    // --- CHROMA KEY SIMPLE ---
+    // Generador de Música Procedural
+    function playNote(freq, duration, type = 'square') {
+        if(isMuted || !audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function startMusic() {
+        if(musicInterval) clearInterval(musicInterval);
+        let step = 0;
+        // Melodía simple de batalla (Frecuencias en Hz)
+        const melody = [
+            110, 0, 110, 0, 130, 0, 146, 0, 
+            110, 0, 110, 0, 164, 0, 146, 0
+        ];
+        const bass = [55, 55, 55, 55]; // Línea de bajo
+
+        musicInterval = setInterval(() => {
+            if(isMuted) return;
+            
+            // Tocar bajo
+            if(step % 4 === 0) playNote(bass[(step/4)%4], 0.2, 'sawtooth');
+            
+            // Tocar melodía
+            const note = melody[step % melody.length];
+            if(note > 0) playNote(note * 2, 0.15, 'square'); // *2 para octava más alta
+
+            step++;
+        }, 150); // Velocidad (BPM aprox)
+    }
+
+    document.getElementById('music-btn').onclick = () => {
+        if(isMuted) initAudio();
+        else {
+            isMuted = true;
+            document.getElementById('music-btn').innerText = "🔇";
+            document.getElementById('music-btn').style.opacity = "0.5";
+            clearInterval(musicInterval);
+        }
+    };
+
+    // --- CHROMA KEY ---
     const processedImages = {};
     function removeBackground(src) {
         return new Promise((resolve) => {
@@ -139,7 +192,7 @@
                 const id = ctx.getImageData(0, 0, c.width, c.height);
                 const d = id.data;
                 for (let i = 0; i < d.length; i += 4) {
-                    if (d[i] < 30 && d[i+1] < 30 && d[i+2] < 30) d[i+3] = 0;
+                    if (d[i] < 47 && d[i+1] < 47 && d[i+2] < 47) d[i+3] = 0;
                 }
                 ctx.putImageData(id, 0, 0);
                 const newImg = new Image();
@@ -158,6 +211,7 @@
         initMenu();
     }
 
+    // --- MOTOR ---
     const canvas = document.querySelector('canvas');
     const c = canvas.getContext('2d');
     canvas.width = 1024; canvas.height = 576;
@@ -167,15 +221,9 @@
         let g = c.createLinearGradient(0, 0, 0, canvas.height);
         g.addColorStop(0, "#0f0c29"); g.addColorStop(1, "#302b63");
         c.fillStyle = g; c.fillRect(0, 0, canvas.width, canvas.height);
-        
-        if(!window.stars) {
-            window.stars = Array(50).fill().map(() => ({
-                x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2
-            }));
-        }
+        if(!window.stars) window.stars = Array(50).fill().map(()=>({x:Math.random()*1024,y:Math.random()*576,s:Math.random()*2}));
         c.fillStyle = "rgba(255,255,255,0.6)";
         window.stars.forEach(st => c.fillRect(st.x, st.y, st.s, st.s));
-
         c.fillStyle = "#1a1a1a"; c.fillRect(0, canvas.height - 80, canvas.width, 80);
         c.fillStyle = "#333"; c.fillRect(0, canvas.height - 80, canvas.width, 4);
     }
@@ -192,31 +240,19 @@
             this.isAI = isAI;
             
             this.width = 50; this.height = 150;
-            
-            this.sheetColumns = 8; 
-            this.rows = 5;
-
-            this.framesMax = 4; 
-            this.framesCurrent = 0;
-            this.framesElapsed = 0;
-            this.framesHold = 8;
-            this.currentRow = 0; 
-            
+            this.sheetColumns = 8; this.rows = 5;
+            this.framesMax = 4; this.framesCurrent = 0;
+            this.framesElapsed = 0; this.framesHold = 8; this.currentRow = 0; 
             this.attackBox = { position: {x:0, y:0}, width: 120, height: 50 };
             this.isAttacking = false;
             this.health = 100;
             this.dead = false;
-            
-            // Variables para IA
-            this.aiCooldown = 0;
         }
 
         draw() {
             if(!this.image) return;
-
             const frameWidth = this.image.width / this.framesMax;
             const frameHeight = this.image.height / this.rows;
-
             const renderW = frameWidth * this.scale;
             const renderH = frameHeight * this.scale;
             const drawX = this.position.x - this.offset.x;
@@ -226,15 +262,7 @@
             c.translate(this.position.x + this.width/2, this.position.y + this.height/2);
             c.scale(this.direction, 1);
             c.translate(-(this.position.x + this.width/2), -(this.position.y + this.height/2));
-
-            c.drawImage(
-                this.image,
-                this.framesCurrent * frameWidth, 
-                this.currentRow * frameHeight,   
-                frameWidth,                      
-                frameHeight,                     
-                drawX, drawY, renderW, renderH   
-            );
+            c.drawImage(this.image, this.framesCurrent * frameWidth, this.currentRow * frameHeight, frameWidth, frameHeight, drawX, drawY, renderW, renderH);
             c.restore();
         }
 
@@ -243,37 +271,22 @@
             if(!this.dead) {
                 this.framesElapsed++;
                 if(this.framesElapsed % this.framesHold === 0) {
-                    if(this.framesCurrent < this.framesMax - 1) {
-                        this.framesCurrent++;
-                    } else {
-                        this.framesCurrent = 0;
-                    }
+                    if(this.framesCurrent < this.framesMax - 1) this.framesCurrent++; else this.framesCurrent = 0;
                 }
             }
 
-            // LÓGICA DE IA (Solo si es P2)
+            // IA Lógica
             if (this.isAI && !this.dead && target && !target.dead) {
                 const dist = Math.abs(this.position.x - target.position.x);
-                const attackDist = this.attackBox.width;
-
-                // Si está lejos, persigue
-                if (dist > attackDist - 20) {
+                if (dist > 80) { // Perseguir
                     if (target.position.x < this.position.x) {
-                        this.velocity.x = -4; 
-                        this.switchSprite(1); // Correr
+                        this.velocity.x = -4; this.switchSprite(1);
                     } else {
-                        this.velocity.x = 4;
-                        this.switchSprite(1); // Correr
+                        this.velocity.x = 4; this.switchSprite(1);
                     }
-                } else {
-                    // Si está cerca, detente y ataca
-                    this.velocity.x = 0;
-                    this.switchSprite(0); // Idle
-                    
-                    // Atacar con probabilidad aleatoria
-                    if (Math.random() < 0.03 && !this.isAttacking) { // 3% probabilidad por frame
-                        this.attack();
-                    }
+                } else { // Atacar
+                    this.velocity.x = 0; this.switchSprite(0);
+                    if (Math.random() < 0.05 && !this.isAttacking) this.attack();
                 }
             }
 
@@ -285,12 +298,10 @@
             this.position.y += this.velocity.y;
 
             if (this.position.y + this.height + this.velocity.y >= canvas.height - 80) {
-                this.velocity.y = 0;
-                this.position.y = canvas.height - 80 - this.height;
+                this.velocity.y = 0; this.position.y = canvas.height - 80 - this.height;
             } else {
                 this.velocity.y += gravity;
             }
-
             if(this.position.x < 0) this.position.x = 0;
             if(this.position.x + this.width > canvas.width) this.position.x = canvas.width - this.width;
         }
@@ -298,9 +309,8 @@
         attack() { this.switchSprite(2); this.isAttacking = true; }
         takeHit() { 
             this.health -= 10; 
-            playHitSound(); // Sonido al recibir golpe
-            if(this.health <= 0) this.switchSprite(4, true); 
-            else this.switchSprite(4); 
+            playHitSound();
+            if(this.health <= 0) this.switchSprite(4, true); else this.switchSprite(4); 
         }
 
         switchSprite(row, isDead = false) {
@@ -346,6 +356,7 @@
         if(!p1Sel) {
             p1Sel = k;
             document.getElementById('select-instruction').innerText = "SELECCIONA RIVAL";
+            initAudio(); // Iniciar audio al primer click
         } else {
             document.getElementById('character-select').style.display = 'none';
             startGame(p1Sel, k);
@@ -353,11 +364,6 @@
     }
 
     function startGame(k1, k2) {
-        // Iniciar contexto de audio (necesita gesto de usuario)
-        if(audioCtx.state === 'suspended') audioCtx.resume();
-        // Intentar reproducir música (si existe)
-        bgMusic.play().catch(e => console.log("Falta archivo de música ./audio/music.mp3"));
-
         document.getElementById('game-ui').style.display = 'block';
         document.getElementById('mobile-controls').style.display = 'block';
         const c1 = CHARACTERS_CONFIG[k1];
@@ -373,7 +379,7 @@
         enemy = new Fighter({
             position: {x: 800, y: 0}, velocity: {x:0, y:0},
             image: processedImages[k2], scale: c2.scale, offset: c2.offset, name: c2.name, direction: -1,
-            isAI: true // ACTIVAR INTELIGENCIA ARTIFICIAL
+            isAI: true
         });
 
         gameRunning = true;
@@ -399,6 +405,7 @@
 
     function endGame() {
         gameRunning = false;
+        clearInterval(musicInterval);
         clearTimeout(timerId);
         document.getElementById('displayText').style.display = 'block';
         const txt = document.getElementById('winnerText');
@@ -418,18 +425,14 @@
             enemy.direction = enemy.position.x >= player.position.x ? -1 : 1;
         }
 
-        player.update(enemy); // Pasamos enemigo para colisiones
-        enemy.update(player); // Pasamos player para que la IA lo vea
+        player.update(enemy);
+        enemy.update(player);
 
-        // P1 Movimiento Manual
         player.velocity.x = 0;
         if(keys.a.pressed) { player.velocity.x = -5; player.switchSprite(1); }
         else if(keys.d.pressed) { player.velocity.x = 5; player.switchSprite(1); }
         else player.switchSprite(0);
 
-        // (La IA controla la velocidad del enemigo en su update)
-
-        // Colisiones
         if(rectCol(player, enemy) && player.isAttacking && player.framesCurrent===2) {
             enemy.takeHit();
             player.isAttacking = false;
@@ -483,7 +486,9 @@
     setupTouch('btn-jump', 'jump');
     setupTouch('btn-attack', 'attack');
 
-    window.addEventListener('click', () => { if(!gameRunning && player) location.reload(); });
+    window.addEventListener('click', () => { 
+        if(!gameRunning && player) location.reload(); 
+    });
 
     loadAssets();
 </script>
