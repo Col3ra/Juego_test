@@ -111,7 +111,7 @@
                 // Umbral fijo y seguro para pixel art con fondo negro
                 for (let i = 0; i < d.length; i += 4) {
                     // Si r, g y b son menores a 30 (muy oscuro), hacerlo transparente
-                    if (d[i] < 30 && d[i+1] < 30 && d[i+2] < 30) {
+                    if (d[i] < 10 && d[i+1] < 10 && d[i+2] < 10) {
                         d[i+3] = 0; 
                     }
                 }
