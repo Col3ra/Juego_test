@@ -134,10 +134,10 @@
     const GLOBAL_SCALE = 0.78;
 
     const CHARACTERS_CONFIG = {
-        juan:  { name: "Juan",  src: "./images/juan.png",  scale: GLOBAL_SCALE, offset: { x: 40, y: 6 } },
-        fran:  { name: "Fran",  src: "./images/fran.png",  scale: GLOBAL_SCALE, offset: { x: 40, y: 6 } },
-        fede:  { name: "Fede",  src: "./images/fede.png",  scale: GLOBAL_SCALE, offset: { x: 40, y: 6 } },
-        rodri: { name: "Rodri", src: "./images/rodri.png", scale: GLOBAL_SCALE, offset: { x: 40, y: 6 } }
+        juan:  { name: "Juan",  src: "./images/juan.png",  scale: GLOBAL_SCALE, offset: { x: 50, y: 0 } },
+        fran:  { name: "Fran",  src: "./images/fran.png",  scale: GLOBAL_SCALE, offset: { x: 50, y: 0 } },
+        fede:  { name: "Fede",  src: "./images/fede.png",  scale: GLOBAL_SCALE, offset: { x: 50, y: 0 } },
+        rodri: { name: "Rodri", src: "./images/rodri.png", scale: GLOBAL_SCALE, offset: { x: 50, y: 0 } }
     };
 
     // --- PROCESAMIENTO DE IMAGEN (CHROMA KEY) ---
@@ -253,23 +253,14 @@
             const drawY = this.position.y + this.height - renderH - this.offset.y;
 
             c.save();
-            if(this.direction === -1) {
-                c.translate(drawX + renderW, drawY);
-                c.scale(-1, 1);
-                c.drawImage(
-                    this.image,
-                    this.framesCurrent * fw, this.currentRow * fh, fw, fh,
-                    0, 0,
-                    renderW, renderH
-                );
-            } else {
-                c.drawImage(
-                    this.image,
-                    this.framesCurrent * fw, this.currentRow * fh, fw, fh,
-                    drawX, drawY,
-                    renderW, renderH
-                );
-            }
+            c.translate(drawX + renderW / 2, drawY);
+            c.scale(this.direction, 1);
+            c.drawImage(
+                this.image,
+                this.framesCurrent * fw, this.currentRow * fh, fw, fh,
+                -renderW / 2, 0,
+                renderW, renderH
+            );
             c.restore();
         }
 
