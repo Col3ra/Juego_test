@@ -131,13 +131,13 @@
        Si se ven muy pequeños ahora, sube esto a 1.2.
        Si se siguen viendo grandes, bájalo a 0.6.
     */
-    const GLOBAL_SCALE = 0.85; 
-    
+    const GLOBAL_SCALE = 0.78;
+
     const CHARACTERS_CONFIG = {
-        juan:  { name: "Juan",  src: "./images/juan.png",  scale: GLOBAL_SCALE, offset: { x: 50, y: 60 } },
-        fran:  { name: "Fran",  src: "./images/fran.png",  scale: GLOBAL_SCALE, offset: { x: 50, y: 60 } },
-        fede:  { name: "Fede",  src: "./images/fede.png",  scale: GLOBAL_SCALE, offset: { x: 50, y: 60 } },
-        rodri: { name: "Rodri", src: "./images/rodri.png", scale: GLOBAL_SCALE, offset: { x: 50, y: 60 } }
+        juan:  { name: "Juan",  src: "./images/juan.png",  scale: GLOBAL_SCALE, offset: { x: 40, y: 6 } },
+        fran:  { name: "Fran",  src: "./images/fran.png",  scale: GLOBAL_SCALE, offset: { x: 40, y: 6 } },
+        fede:  { name: "Fede",  src: "./images/fede.png",  scale: GLOBAL_SCALE, offset: { x: 40, y: 6 } },
+        rodri: { name: "Rodri", src: "./images/rodri.png", scale: GLOBAL_SCALE, offset: { x: 40, y: 6 } }
     };
 
     // --- PROCESAMIENTO DE IMAGEN (CHROMA KEY) ---
@@ -215,13 +215,14 @@
     }
 
     class Fighter {
-        constructor({ position, velocity, image, scale, offset, name }) {
+        constructor({ position, velocity, image, scale, offset, name, direction = 1 }) {
             this.position = position;
             this.velocity = velocity;
             this.image = image;
             this.scale = scale;
             this.offset = offset; // offset visual
             this.name = name;
+            this.direction = direction; // 1 mira a la derecha, -1 a la izquierda
             
             this.width = 50; // hitbox ancho
             this.height = 150; // hitbox alto
@@ -245,13 +246,31 @@
             // Ancho de frame calculado dinámicamente
             const fw = this.image.width / this.framesMax;
             const fh = this.image.height / this.rows;
-            
-            c.drawImage(
-                this.image,
-                this.framesCurrent * fw, this.currentRow * fh, fw, fh,
-                this.position.x - this.offset.x, this.position.y - this.offset.y,
-                fw * this.scale, fh * this.scale
-            );
+
+            const renderW = fw * this.scale;
+            const renderH = fh * this.scale;
+            const drawX = this.position.x - this.offset.x;
+            const drawY = this.position.y + this.height - renderH - this.offset.y;
+
+            c.save();
+            if(this.direction === -1) {
+                c.translate(drawX + renderW, drawY);
+                c.scale(-1, 1);
+                c.drawImage(
+                    this.image,
+                    this.framesCurrent * fw, this.currentRow * fh, fw, fh,
+                    0, 0,
+                    renderW, renderH
+                );
+            } else {
+                c.drawImage(
+                    this.image,
+                    this.framesCurrent * fw, this.currentRow * fh, fw, fh,
+                    drawX, drawY,
+                    renderW, renderH
+                );
+            }
+            c.restore();
         }
 
         update() {
@@ -265,11 +284,7 @@
             }
 
             // Attack box logic
-            // Si soy P1 (izquierda) pego a la derecha, si soy P2 (derecha) pego a la izquierda
-            // Simplificación: Basado en nombre para este demo
-            const isP1 = (this.name === player?.name);
-            const atkOffset = isP1 ? 50 : -120; 
-
+            const atkOffset = this.direction === 1 ? this.width : -this.attackBox.width;
             this.attackBox.position.x = this.position.x + atkOffset;
             this.attackBox.position.y = this.position.y + 40;
 
@@ -365,11 +380,11 @@
 
         player = new Fighter({
             position: {x: 200, y: 0}, velocity: {x:0, y:0},
-            image: processedImages[k1], scale: c1.scale, offset: c1.offset, name: c1.name
+            image: processedImages[k1], scale: c1.scale, offset: c1.offset, name: c1.name, direction: 1
         });
         enemy = new Fighter({
             position: {x: 800, y: 0}, velocity: {x:0, y:0},
-            image: processedImages[k2], scale: c2.scale, offset: c2.offset, name: c2.name
+            image: processedImages[k2], scale: c2.scale, offset: c2.offset, name: c2.name, direction: -1
         });
 
         gameRunning = true;
@@ -406,10 +421,16 @@
     function animate() {
         if(!gameRunning) return;
         window.requestAnimationFrame(animate);
-        
+
         // Clear & BG
         c.clearRect(0,0,canvas.width, canvas.height);
         drawBackground();
+
+        // Mirar siempre al oponente
+        if(player && enemy) {
+            player.direction = player.position.x <= enemy.position.x ? 1 : -1;
+            enemy.direction = enemy.position.x >= player.position.x ? -1 : 1;
+        }
 
         player.update();
         enemy.update();
@@ -497,5 +518,3 @@
 </script>
 </body>
 </html>
-
-
