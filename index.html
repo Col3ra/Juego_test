@@ -6,39 +6,79 @@
     <title>Amigos Kombat</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-        body { background-color: #000; margin: 0; height: 100vh; width: 100vw; overflow: hidden; font-family: 'Press Start 2P', cursive; color: white; touch-action: none; }
-        #game-container { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background: #1a1a1a; }
-        canvas { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
-        
-        /* UI */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        body {
+            background-color: #000;
+            margin: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            font-family: 'Press Start 2P', cursive;
+            color: white;
+            touch-action: none; 
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #1a1a1a; 
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain; 
+            image-rendering: pixelated;
+        }
+
+        /* UI Layers */
         .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: none; }
         .top-bar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: space-between; width: 90%; max-width: 600px; }
+        
         .health-wrapper { width: 40%; }
         .player-name { font-size: 10px; margin-bottom: 4px; text-shadow: 2px 2px 0 #000; }
         .health-bar-container { width: 100%; height: 15px; background: #555; border: 2px solid #fff; }
-        .health-bar { height: 100%; background: #4ade80; transition: width 0.1s linear; } /* Transición más rápida para golpes */
+        .health-bar { height: 100%; background: #4ade80; transition: width 0.2s; }
         #enemyHealth { background: #f87171; float: right; }
+        
         .timer { width: 30px; height: 30px; background: #222; border: 2px solid #fff; display: flex; justify-content: center; align-items: center; font-size: 14px; }
+
         .overlay-text { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 30px; display: none; z-index: 20; text-shadow: 3px 3px 0 #000; text-align: center; width: 100%; }
 
-        /* Menu */
+        /* Selección de Personaje */
         #character-select { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #121212; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         #character-select h2 { margin-bottom: 15px; font-size: 16px; color: #e94560; }
         .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .char-card { background: #222; border: 2px solid #444; padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; }
         .char-preview { width: 50px; height: 50px; background-size: 400%; background-position: 0 0; border-radius: 50%; margin: 0 auto 5px auto; background-color: #000; }
-        
-        /* Controls */
+
+        /* Controles mejorados para dedos */
         #mobile-controls { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
-        .control-area-left { position: absolute; bottom: 20px; left: 20px; width: 160px; height: 160px; pointer-events: auto; }
-        .control-area-right { position: absolute; bottom: 20px; right: 20px; width: 160px; height: 160px; pointer-events: auto; }
-        .btn { width: 65px; height: 65px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; position: absolute; display: flex; justify-content: center; align-items: center; font-size: 24px; color: white; }
-        .btn:active { background: rgba(255,255,255,0.4); transform: scale(0.95); }
-        #btn-left { bottom: 10px; left: 0; }
-        #btn-right { bottom: 10px; left: 80px; }
-        #btn-attack { bottom: 20px; right: 80px; width: 75px; height: 75px; background: rgba(255,0,0,0.2); border-color: #e94560; }
+        .control-area-left { position: absolute; bottom: 20px; left: 20px; width: 140px; height: 140px; pointer-events: auto; }
+        .control-area-right { position: absolute; bottom: 20px; right: 20px; width: 140px; height: 140px; pointer-events: auto; }
+
+        .btn { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; position: absolute; display: flex; justify-content: center; align-items: center; font-size: 20px; color: white; }
+        .btn:active { background: rgba(255,255,255,0.4); }
+        
+        /* Posicionamiento ergonómico de botones */
+        #btn-left { bottom: 0; left: 0; }
+        #btn-right { bottom: 0; right: 0; }
+        #btn-attack { bottom: 20px; left: 0; width: 70px; height: 70px; background: rgba(255,0,0,0.2); border-color: #e94560; }
         #btn-jump { bottom: 40px; right: 0; }
+
         #loading-msg { color: #888; font-size: 10px; margin-top: 10px; }
     </style>
 </head>
@@ -86,16 +126,14 @@
 </div>
 
 <script>
-    // --- AJUSTES DE POSICIÓN Y TAMAÑO ---
-    const GLOBAL_SCALE = 0.85; 
-
-    // FIX: El offset.y controla qué tan abajo se dibuja la imagen respecto a la caja de colisión.
-    // Si flotan, aumenta el valor de 'y' negativo (o disminuye el positivo dependiendo de la lógica).
-    // Aquí usamos valores negativos para "bajar" el dibujo visualmente hacia el suelo.
+    const GLOBAL_SCALE = 0.78;
+    
+    // FIX 1: Offset negativo para bajar el dibujo al suelo
     const Y_OFFSET_FIX = -55; 
-    const X_OFFSET_FIX = 130; // Centrar sprite en la hitbox
+    const X_OFFSET_FIX = 130;
 
     const CHARACTERS_CONFIG = {
+        // FIX: Rutas respetando tu carpeta images
         juan:  { name: "Juan",  src: "./images/juan.png",  scale: GLOBAL_SCALE, offset: { x: X_OFFSET_FIX, y: Y_OFFSET_FIX } },
         fran:  { name: "Fran",  src: "./images/fran.png",  scale: GLOBAL_SCALE, offset: { x: X_OFFSET_FIX, y: Y_OFFSET_FIX } },
         fede:  { name: "Fede",  src: "./images/fede.png",  scale: GLOBAL_SCALE, offset: { x: X_OFFSET_FIX, y: Y_OFFSET_FIX } },
@@ -139,27 +177,38 @@
     // --- MOTOR ---
     const canvas = document.querySelector('canvas');
     const c = canvas.getContext('2d');
-    canvas.width = 1024; canvas.height = 576;
+    canvas.width = 1024; 
+    canvas.height = 576;
+    
     const gravity = 0.6;
 
-    // Estrellas
+    // Estrellas para el fondo
     const stars = Array(40).fill().map(() => ({
-        x: Math.random() * canvas.width, y: Math.random() * canvas.height,
-        s: Math.random() * 2, v: Math.random() * 0.5 + 0.1
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        s: Math.random() * 2,
+        v: Math.random() * 0.5 + 0.1
     }));
 
     function drawBackground() {
         let g = c.createLinearGradient(0, 0, 0, canvas.height);
-        g.addColorStop(0, "#0f0c29"); g.addColorStop(1, "#302b63");
-        c.fillStyle = g; c.fillRect(0, 0, canvas.width, canvas.height);
+        g.addColorStop(0, "#0f0c29"); 
+        g.addColorStop(1, "#302b63");
+        c.fillStyle = g; 
+        c.fillRect(0, 0, canvas.width, canvas.height);
+
         c.fillStyle = "rgba(255,255,255,0.6)";
         stars.forEach(st => {
             c.fillRect(st.x, st.y, st.s, st.s);
-            st.x -= st.v; if(st.x < 0) st.x = canvas.width;
+            st.x -= st.v;
+            if(st.x < 0) st.x = canvas.width;
         });
-        // Suelo visual
-        c.fillStyle = "#1a1a1a"; c.fillRect(0, canvas.height - 80, canvas.width, 80);
-        c.fillStyle = "#333"; c.fillRect(0, canvas.height - 80, canvas.width, 4);
+
+        // Suelo
+        c.fillStyle = "#1a1a1a";
+        c.fillRect(0, canvas.height - 80, canvas.width, 80);
+        c.fillStyle = "#333"; // Borde suelo
+        c.fillRect(0, canvas.height - 80, canvas.width, 4);
     }
 
     class Fighter {
@@ -175,16 +224,13 @@
             this.width = 50; 
             this.height = 150; 
             
-            // --- FIX CRÍTICO DE ANIMACIÓN ---
-            // La hoja de sprites generada tiene 8 columnas de ancho total.
-            // Siempre debemos dividir el ancho de la imagen por 8, 
-            // independientemente de cuántos frames use la animación actual.
-            this.sheetColumns = 8; 
+            // FIX 2: Definir columnas fijas (8) para evitar efecto persiana
+            this.sheetColumns = 8;
 
             this.framesMax = 4; 
             this.framesCurrent = 0;
             this.framesElapsed = 0;
-            this.framesHold = 6; // Más rápido para fluidez
+            this.framesHold = 8;
             this.rows = 5; 
             this.currentRow = 0; 
             
@@ -197,37 +243,28 @@
 
         draw() {
             if(!this.image) return;
-
-            // --- FIX DE PERSIANA ---
-            // Usamos this.sheetColumns (8) en lugar de this.framesMax
+            
+            // FIX 2 (Aplicación): Usar sheetColumns en lugar de framesMax
             const fw = this.image.width / this.sheetColumns; 
             const fh = this.image.height / this.rows;
 
             const renderW = fw * this.scale;
             const renderH = fh * this.scale;
-            
-            // --- FIX DE FLOTAR ---
-            // Dibujamos relativo a la posición + el offset configurado
+
             const drawX = this.position.x - this.offset.x;
-            const drawY = this.position.y - this.offset.y; 
+            // FIX 1 (Aplicación): Bajar el dibujo usando offset negativo
+            const drawY = this.position.y + this.height - renderH - this.offset.y;
 
             c.save();
-            // Punto de pivote para invertir dirección (espejo)
-            c.translate(this.position.x + this.width/2, this.position.y + this.height/2);
+            c.translate(drawX + renderW / 2, drawY);
             c.scale(this.direction, 1);
-            c.translate(-(this.position.x + this.width/2), -(this.position.y + this.height/2));
-
             c.drawImage(
                 this.image,
                 this.framesCurrent * fw, this.currentRow * fh, fw, fh,
-                drawX, drawY,
+                -renderW / 2, 0,
                 renderW, renderH
             );
             c.restore();
-            
-            // DEBUG: Descomenta esto para ver la caja roja de colisión real
-            // c.fillStyle = 'rgba(255, 0, 0, 0.3)';
-            // c.fillRect(this.position.x, this.position.y, this.width, this.height);
         }
 
         update() {
@@ -241,15 +278,14 @@
             }
 
             // Attack box logic
-            const atkOffset = this.direction === 1 ? 0 : -this.attackBox.width + this.width;
+            const atkOffset = this.direction === 1 ? this.width : -this.attackBox.width;
             this.attackBox.position.x = this.position.x + atkOffset;
             this.attackBox.position.y = this.position.y + 40;
 
             this.position.x += this.velocity.x;
             this.position.y += this.velocity.y;
 
-            // Suelo (Hitbox se detiene en el piso)
-            // El piso visual está en canvas.height - 80
+            // Suelo
             if (this.position.y + this.height + this.velocity.y >= canvas.height - 80) {
                 this.velocity.y = 0;
                 this.position.y = canvas.height - 80 - this.height;
@@ -303,8 +339,8 @@
             const pc = document.createElement('canvas');
             pc.width=50; pc.height=50;
             const pctx = pc.getContext('2d');
-            // Preview usando el ancho de columna fijo (8) para que la cara salga bien
-            const fw = processedImages[key].width / 8;
+            // Preview usando el ancho fijo (8 columnas)
+            const fw = processedImages[key].width / 8; 
             pctx.drawImage(processedImages[key], 0, 0, fw, fw, 0, 0, 200, 200); 
             div.innerHTML = `<div class="char-preview" style="background-image:url(${pc.toDataURL()})"></div><span>${char.name}</span>`;
             div.onclick = () => selectChar(key);
@@ -380,28 +416,24 @@
         c.clearRect(0,0,canvas.width, canvas.height);
         drawBackground();
 
-        // Orientación automática
         if(player && enemy) {
-            if(player.position.x < enemy.position.x) { player.direction = 1; enemy.direction = -1; }
-            else { player.direction = -1; enemy.direction = 1; }
+            player.direction = player.position.x <= enemy.position.x ? 1 : -1;
+            enemy.direction = enemy.position.x >= player.position.x ? -1 : 1;
         }
 
         player.update();
         enemy.update();
 
-        // P1 Movimiento
         player.velocity.x = 0;
         if(keys.a.pressed) { player.velocity.x = -5; player.switchSprite(1); }
         else if(keys.d.pressed) { player.velocity.x = 5; player.switchSprite(1); }
         else player.switchSprite(0);
 
-        // P2 Movimiento
         enemy.velocity.x = 0;
         if(keys.ArrowLeft.pressed) { enemy.velocity.x = -5; enemy.switchSprite(1); }
         else if(keys.ArrowRight.pressed) { enemy.velocity.x = 5; enemy.switchSprite(1); }
         else enemy.switchSprite(0);
 
-        // Colisiones
         if(rectCol(player, enemy) && player.isAttacking && player.framesCurrent===2) {
             enemy.takeHit();
             player.isAttacking = false;
@@ -419,7 +451,6 @@
         if(player.health<=0 || enemy.health<=0) endGame();
     }
 
-    // Controles
     window.addEventListener('keydown', e => {
         if(!gameRunning) return;
         switch(e.key) {
@@ -427,7 +458,6 @@
             case 'a': keys.a.pressed=true; break;
             case 'w': if(player.velocity.y===0) player.velocity.y = -15; break;
             case ' ': player.attack(); break;
-            
             case 'ArrowRight': keys.ArrowRight.pressed=true; break;
             case 'ArrowLeft': keys.ArrowLeft.pressed=true; break;
             case 'ArrowUp': if(enemy.velocity.y===0) enemy.velocity.y = -15; break;
@@ -443,14 +473,13 @@
         }
     });
 
-    // Touch
     const setupTouch = (id, action, val) => {
         const btn = document.getElementById(id);
         btn.addEventListener('touchstart', e => {
             e.preventDefault();
             if(!gameRunning) return;
             if(action === 'move') keys[val].pressed = true;
-            if(action === 'jump' && player.velocity.y===0) player.velocity.y = -15;
+            if(action === 'jump') { if(player.velocity.y===0) player.velocity.y = -15; }
             if(action === 'attack') player.attack();
         });
         btn.addEventListener('touchend', e => {
